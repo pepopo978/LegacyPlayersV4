@@ -1,5 +1,8 @@
 FROM rust:1.69
 
+RUN rustup install nightly-2024-01-22
+RUN rustup default nightly-2024-01-22
+
 RUN rustup target add wasm32-unknown-unknown
 
 RUN mkdir /Backend
