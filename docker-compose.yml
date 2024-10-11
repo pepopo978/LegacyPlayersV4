@@ -4,6 +4,8 @@ services:
     build: ./Database
     networks:
     - rpll
+    ports:
+      - '1235:3306'
     volumes:
     - ./Database/patches:/docker-entrypoint-initdb.d
     - rpll_mariadb:/var/lib/mysql
