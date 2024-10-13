@@ -274,8 +274,12 @@ export class RaidGraphComponent implements OnInit, OnDestroy {
                         label: data_set,
                         type: (is_event_data_set(data_set) ? "scatter" : number_to_chart_type(this.selected_chart_type)) as ChartType,
                         pointStyle: (({dataIndex, dataset}) => {
-                            const icon = !!(dataset.data[dataIndex] as any).spell_id ? this.spellService.spells.get((dataset.data[dataIndex] as any).spell_id).icon : undefined;
-                            return get_point_style(data_set, icon);
+                            if(dataset.data[dataIndex]) {
+                                const icon = !!(dataset.data[dataIndex] as any).spell_id ? this.spellService.spells.get((dataset.data[dataIndex] as any).spell_id).icon : undefined;
+                                return get_point_style(data_set, icon);
+                            } else {
+                                return get_point_style(data_set, undefined);
+                            }
                         }) as any
                     });
                 } else {

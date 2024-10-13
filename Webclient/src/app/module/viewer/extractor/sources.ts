@@ -6,6 +6,7 @@ export function se_spell_cast(event: Event): Unit | null {
 }
 
 export function se_death(event: Event): Unit {
+    console.log(event)
     return event[2] as Unit;
 }
 
