@@ -63,9 +63,9 @@ impl Instance {
                 evict_attempts_cache(Arc::clone(&instance_attempts_arc_clone));
                 evict_export_cache(Arc::clone(&instance_exports_arc_clone));
                 update_instance_metas(Arc::clone(&instance_metas_arc_clone), &mut db_main, &armory);
+                update_instance_kill_attempts(Arc::clone(&instance_kill_attempts_clone), &mut db_main);
 
-                if armory_counter % 6 == 0 {
-                    update_instance_kill_attempts(Arc::clone(&instance_kill_attempts_clone), &mut db_main);
+                if armory_counter >= 1000 {
                     update_instance_rankings_dps(Arc::clone(&instance_rankings_dps_arc_clone), &mut db_main, &armory);
                     update_instance_rankings_hps(Arc::clone(&instance_rankings_hps_arc_clone), &mut db_main, &armory);
                     update_instance_rankings_tps(Arc::clone(&instance_rankings_tps_arc_clone), &mut db_main, &armory);
@@ -75,13 +75,12 @@ impl Instance {
                     calculate_speed_kills(Arc::clone(&instance_metas_arc_clone),
                                           Arc::clone(&instance_kill_attempts_clone),
                                           Arc::clone(&speed_kills_arc_clone), &mut db_main, &armory);
+                    armory.update(&mut db_main);
+                    armory_counter = 0;
                 }
 
-                if armory_counter % 12 == 0 {
-                    armory.update(&mut db_main);
-                }
                 armory_counter += 1;
-                std::thread::sleep(std::time::Duration::from_secs(3600));
+                std::thread::sleep(std::time::Duration::from_secs(30));
             }
         });
         self
@@ -407,7 +406,7 @@ fn evict_attempts_cache(instance_attempts: Arc<RwLock<HashMap<u32, Cachable<Vec<
     let mut instance_attempts = instance_attempts.write().unwrap();
     for instance_meta_id in instance_attempts
         .iter()
-        .filter(|(_, cachable)| cachable.get_last_access() + 300 < now)
+        .filter(|(_, cachable)| cachable.get_last_access() + 259200 < now)
         .map(|(instance_meta_id, _)| *instance_meta_id)
         .collect::<Vec<u32>>()
     {
@@ -420,7 +419,7 @@ fn evict_export_cache(instance_exports: Arc<RwLock<HashMap<(u32, u8), Cachable<V
     let mut instance_exports = instance_exports.write().unwrap();
     for instance_meta_id in instance_exports
         .iter()
-        .filter(|(_, cachable)| cachable.get_last_access() + 300 < now)
+        .filter(|(_, cachable)| cachable.get_last_access() + 259200 < now)
         .map(|(instance_meta_id, _)| *instance_meta_id)
         .collect::<Vec<(u32, u8)>>()
     {
