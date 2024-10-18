@@ -25,6 +25,6 @@ receiving such patches depends on the CVSS v3.0 Rating:
 ## Reporting a Vulnerability
 
 Please report (suspected) security vulnerabilities to
-**[security@legacyplayers.com](mailto:security@legacyplayers.com)**. You will receive a response from
+**[security@turtlogs.com](mailto:security@turtlogs.com)**. You will receive a response from
 us within 48 hours. If the issue is confirmed, we will release a patch as soon
 as possible depending on complexity but historically within a few days.

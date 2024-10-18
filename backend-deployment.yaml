@@ -28,7 +28,7 @@ spec:
       containers:
         - env:
             - name: HOST
-              value: legacyplayers.com
+              value: turtlogs.com
             - name: INSTANCE_STORAGE_PATH
               value: /Storage
             - name: MODEL_GENERATOR

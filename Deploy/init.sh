@@ -1,6 +1,6 @@
 REPOSITORY_NAME='LegacyPlayersV3'
 REPOSITORY='https://github.com/Geigerkind/LegacyPlayersV3'
-DOMAIN='legacyplayers.com'
+DOMAIN='turtlogs.com'
 HOST_USER='root'
 BACKEND_USER='rpll'
 HOST_IP='5.161.218.52'

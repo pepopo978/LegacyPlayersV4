@@ -26,7 +26,7 @@ services:
     - MYSQL_URL=mysql://root:vagrant@mariadb/main
     - ROCKET_DATABASES={main={url="mysql://root:vagrant@mariadb/main"}}
     - SMTP_DNS=127.0.0.1:25
-    - HOST=legacyplayers.com
+    - HOST=turtlogs.com
     - MODEL_GENERATOR=http://localhost:5555
     - INSTANCE_STORAGE_PATH=/Storage
   webclient:
