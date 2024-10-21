@@ -17,7 +17,6 @@ export class AppComponent implements OnInit, OnChanges {
     private static readonly URL_ACCOUNT_GET: string = '/account/get';
 
 
-    public show_cookie_banner = false;
     title = "LegacyPlayers";
     private googleAnalyticsSubscription: Subscription
 
@@ -38,7 +37,6 @@ export class AppComponent implements OnInit, OnChanges {
     }
 
     ngOnInit(): void {
-        this.set_cookie_banner(!this.settingsService.check("cookieDecisions"));
         this.configure_google_analytics(this.settingsService.get("cookieDecisions"));
         this.retrieve_account_information();
         setInterval(() => this.set_ad_width_flags(), 500);
@@ -46,10 +44,6 @@ export class AppComponent implements OnInit, OnChanges {
 
     ngOnChanges(): void {
         this.configure_google_analytics(this.settingsService.get("cookieDecisions"));
-    }
-
-    set_cookie_banner(state: boolean): void {
-        this.show_cookie_banner = state;
     }
 
     set_ad_width_flags(): void {

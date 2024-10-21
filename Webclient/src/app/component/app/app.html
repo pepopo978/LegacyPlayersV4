@@ -1,4 +1,3 @@
-<CookieBanner *ngIf="show_cookie_banner" (close_banner)="set_cookie_banner($event)"></CookieBanner>
 <NotificationList></NotificationList>
 <Tooltip id="global_tooltip"></Tooltip>
 <NavigationBar></NavigationBar>
@@ -33,4 +32,3 @@
     </div>
     <div *ngIf="enable_ads" class="vm-placement" data-id="609a80769ddea76a9b42dd08" style="display:none"></div>
 </main>
-<FooterBar (consent)="set_cookie_banner(true)"></FooterBar>
