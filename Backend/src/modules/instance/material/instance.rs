@@ -9,7 +9,7 @@ use crate::modules::instance::domain_value::{InstanceAttempt, InstanceMeta, Meta
 use crate::modules::instance::dto::{InstanceViewerAttempt, RankingResult, SpeedKill, SpeedRun};
 use crate::modules::instance::tools::FindInstanceGuild;
 use crate::params;
-use crate::util::database::Select;
+use crate::util::database::*;
 use chrono::{NaiveDateTime, Datelike};
 
 pub struct Instance {
@@ -44,7 +44,7 @@ impl Default for Instance {
 }
 
 impl Instance {
-    pub fn init(self, mut db_main: (impl Select + Send + 'static)) -> Self {
+    pub fn init(self, mut db_main: (impl Select + Send + Execute + 'static)) -> Self {
         let instance_metas_arc_clone = Arc::clone(&self.instance_metas);
         let instance_exports_arc_clone = Arc::clone(&self.instance_exports);
         let instance_attempts_arc_clone = Arc::clone(&self.instance_attempts);
@@ -55,17 +55,22 @@ impl Instance {
         let speed_runs_arc_clone = Arc::clone(&self.speed_runs);
         let speed_kills_arc_clone = Arc::clone(&self.speed_kills);
 
+        let mut startup = true;
+
         std::thread::spawn(move || {
             let mut armory_counter = 1;
             let armory = Armory::default().init(&mut db_main);
 
             loop {
+                delete_old_character_data(&mut db_main);
                 evict_attempts_cache(Arc::clone(&instance_attempts_arc_clone));
                 evict_export_cache(Arc::clone(&instance_exports_arc_clone));
                 update_instance_metas(Arc::clone(&instance_metas_arc_clone), &mut db_main, &armory);
                 update_instance_kill_attempts(Arc::clone(&instance_kill_attempts_clone), &mut db_main);
 
-                if armory_counter >= 1000 {
+                if startup || armory_counter >= 1000 {
+                    // purge old character info
+
                     update_instance_rankings_dps(Arc::clone(&instance_rankings_dps_arc_clone), &mut db_main, &armory);
                     update_instance_rankings_hps(Arc::clone(&instance_rankings_hps_arc_clone), &mut db_main, &armory);
                     update_instance_rankings_tps(Arc::clone(&instance_rankings_tps_arc_clone), &mut db_main, &armory);
@@ -77,6 +82,7 @@ impl Instance {
                                           Arc::clone(&speed_kills_arc_clone), &mut db_main, &armory);
                     armory.update(&mut db_main);
                     armory_counter = 0;
+                    startup = false;
                 }
 
                 armory_counter += 1;
@@ -425,6 +431,18 @@ fn evict_export_cache(instance_exports: Arc<RwLock<HashMap<(u32, u8), Cachable<V
     {
         instance_exports.remove(&instance_meta_id);
     }
+}
+
+fn delete_old_character_data(db_main: &mut (impl  Select + Execute)) {
+    // delete old armory_character_info
+    db_main.execute_one(
+        "delete FROM main.armory_character_info where id not in (SELECT character_info_id FROM main.armory_character_history);"
+    );
+
+    // delete old armory_gear
+    db_main.execute_one(
+        "delete FROM main.armory_gear where id not in (SELECT gear_id FROM main.armory_character_info);"
+    );
 }
 
 fn update_instance_metas(instance_metas: Arc<RwLock<(u32, HashMap<u32, InstanceMeta>)>>, db_main: &mut impl Select, armory: &Armory) {

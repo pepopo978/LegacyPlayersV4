@@ -34,4 +34,5 @@ impl DeleteCharacterHistory for Armory {
         }
         Err(ArmoryFailure::Database("delete_character_history".to_owned()))
     }
+
 }

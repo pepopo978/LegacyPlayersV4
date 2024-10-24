@@ -4,3 +4,4 @@ mod create_character_history;
 mod delete_character_history;
 mod get_character_history;
 mod set_character_history;
+mod delete_all_but_latest_character_history;

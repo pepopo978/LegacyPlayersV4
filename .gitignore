@@ -2,7 +2,6 @@
 .vscode
 .idea
 LegacyPlayersV3.iml
-Cargo.lock
 target
 out
 Storage
