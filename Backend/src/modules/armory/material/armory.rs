@@ -15,7 +15,6 @@ pub struct Armory {
 
     // Caches
     // TODO: Evict them at some point!
-    pub cache_char_history: RwLock<HashMap<u32, CharacterHistory>>,
     pub cache_char_name_to_id: RwLock<HashMap<String, Vec<u32>>>,
 }
 
@@ -24,7 +23,6 @@ impl Default for Armory {
         Armory {
             characters: RwLock::new(HashMap::new()),
             guilds: RwLock::new(HashMap::new()),
-            cache_char_history: RwLock::new(HashMap::new()),
             cache_char_name_to_id: RwLock::new(HashMap::new()),
         }
     }
