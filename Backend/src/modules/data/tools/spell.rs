@@ -23,9 +23,9 @@ impl RetrieveSpell for Data {
             .get(expansion_id as usize - 1)
             .and_then(|map| {
                 // Try finding an exact match first
-                map.iter().find(|(_, spell)| spell.name.eq(spell_name))
+                map.iter().find(|(_, spell)| spell.name.trim().eq(spell_name))
                     // If no exact match is found, try finding a substring match
-                    .or_else(|| map.iter().find(|(_, spell)| spell.name.contains(spell_name)))
+                    .or_else(|| map.iter().find(|(_, spell)| spell.name.trim().contains(spell_name)))
             })
             .map(|(_, spell)| spell.clone())
     }
