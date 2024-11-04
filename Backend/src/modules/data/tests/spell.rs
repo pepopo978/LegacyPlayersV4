@@ -10,8 +10,8 @@ fn get_spell() {
     let spell = Spell {
         id: spell_id,
         expansion_id,
-        localization_id: 0,
-        subtext_localization_id: 0,
+        name: "test".parse().unwrap(),
+        description: "test".parse().unwrap(),
         cost: 0,
         cost_in_percent: false,
         power_type: 0,
@@ -22,8 +22,6 @@ fn get_spell() {
         cooldown: 0,
         duration: 0,
         icon: 0,
-        description_localization_id: 0,
-        aura_localization_id: 0,
     };
     let mut hashmap = HashMap::new();
     hashmap.insert(spell_id, spell.clone());

@@ -12,9 +12,9 @@ COPY ./Cargo.toml /Backend/Cargo.toml
 
 WORKDIR /Backend
 
-RUN cargo update
-RUN cargo build --release
+RUN export CARGO_REGISTRIES_CRATES_IO_PROTOCOL=sparse;cargo update
+RUN export CARGO_REGISTRIES_CRATES_IO_PROTOCOL=sparse;cargo build --release
 
-ENTRYPOINT ["/bin/bash", "-c", "sleep 5s && /Backend/target/release/backend"]
+ENTRYPOINT ["/bin/bash", "-c", "export RUST_BACKTRACE=full;sleep 5s && /Backend/target/release/backend"]
 
 

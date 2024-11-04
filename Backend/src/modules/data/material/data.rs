@@ -303,23 +303,26 @@ impl Init for Vec<HashMap<u32, Spell>> {
     fn init(&mut self, db_main: &mut impl Select) {
         let mut last_expansion_id = 0;
         db_main
-            .select("SELECT * FROM data_spell ORDER BY expansion_id, id", |mut row| Spell {
-                expansion_id: row.take(0).unwrap(),
-                id: row.take(1).unwrap(),
-                localization_id: row.take(2).unwrap(),
-                subtext_localization_id: row.take(3).unwrap(),
-                cost: row.take(4).unwrap(),
-                cost_in_percent: row.take(5).unwrap(),
-                power_type: row.take(6).unwrap(),
-                cast_time: row.take(7).unwrap(),
-                school_mask: row.take(8).unwrap(),
-                dispel_type: row.take(9).unwrap(),
-                range_max: row.take(10).unwrap(),
-                cooldown: row.take(11).unwrap(),
-                duration: row.take(12).unwrap(),
-                icon: row.take(13).unwrap(),
-                description_localization_id: row.take(14).unwrap(),
-                aura_localization_id: row.take(15).unwrap(),
+            .select("SELECT id, name_enUS as name, subtext_enUS as subtext, manaCost as cost,
+            manaCostPercentage as cost_in_percent, powerType as power_type, school as school_mask,
+            dispelType as dispel_type, recoveryTime as cooldown, spellIconId as icon,
+             description_enUS as description, auraDescription_enUS as aura FROM spell_dbc ORDER BY id", |mut row| Spell {
+                expansion_id: 1,  // only supports vanilla now
+                id: row.take(0).unwrap(),
+                name: row.take(1).unwrap(),
+                subtext: row.take(2).unwrap(),
+                cost: row.take(3).unwrap(),
+                cost_in_percent: row.take(4).unwrap(),
+                power_type: row.take(5).unwrap(),
+                cast_time: 0, // not worth the effort
+                school_mask: row.take(6).unwrap(),
+                dispel_type: row.take(7).unwrap(),
+                range_max: 0, // not worth the effort
+                cooldown: row.take(8).unwrap(),
+                duration: 0, // not worth the effort
+                icon: row.take(9).unwrap(),
+                description: row.take(10).unwrap(),
+                aura: row.take(11).unwrap(),
             })
             .into_iter()
             .for_each(|result| {

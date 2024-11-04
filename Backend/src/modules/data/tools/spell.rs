@@ -1,4 +1,3 @@
-use crate::modules::data::tools::RetrieveLocalization;
 use crate::modules::data::{domain_value::Spell, Data};
 
 pub trait RetrieveSpell {
@@ -22,7 +21,7 @@ impl RetrieveSpell for Data {
 
         self.spells
             .get(expansion_id as usize - 1)
-            .and_then(|map| map.iter().find(|(_, spell)| self.get_localization(1, spell.localization_id).map(|localization| localization.content).contains(spell_name)))
+            .and_then(|map| map.iter().find(|(_, spell)| spell.name.contains(spell_name)))
             .map(|(_, spell)| spell.clone())
     }
 }

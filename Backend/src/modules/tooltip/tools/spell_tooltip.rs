@@ -1,6 +1,6 @@
 use crate::modules::{
     data::{
-        tools::{RetrieveIcon, RetrieveLocalization, RetrievePowerType, RetrieveSpell, SpellDescription},
+        tools::{RetrieveIcon, RetrieveLocalization, RetrievePowerType, RetrieveSpell},
         Data,
     },
     tooltip::{domain_value::SpellCost, dto::TooltipFailure, material::SpellTooltip, Tooltip},
@@ -17,23 +17,29 @@ impl RetrieveSpellTooltip for Tooltip {
             return Err(TooltipFailure::InvalidInput);
         }
         let spell = spell_res.unwrap();
-        let spell_cost = if spell.cost > 0 {
+        let spell_cost = if spell.cost_in_percent > 0 {
+            Some(SpellCost {
+                cost: spell.cost_in_percent,
+                cost_in_percent: true,
+                power_type: data.get_power_type(spell.power_type + 1).and_then(|power_type| data.get_localization(language_id, power_type.localization_id)).unwrap().content,
+            })
+        } else if spell.cost > 0 {
             Some(SpellCost {
                 cost: spell.cost,
-                cost_in_percent: spell.cost_in_percent,
-                power_type: data.get_power_type(spell.power_type).and_then(|power_type| data.get_localization(language_id, power_type.localization_id)).unwrap().content,
+                cost_in_percent: false,
+                power_type: data.get_power_type(spell.power_type + 1).and_then(|power_type| data.get_localization(language_id, power_type.localization_id)).unwrap().content,
             })
         } else {
             None
         };
 
         Ok(SpellTooltip {
-            name: data.get_localization(language_id, spell.localization_id).unwrap().content,
+            name: spell.name,
             icon: data.get_icon(spell.icon).unwrap().name,
-            subtext: data.get_localization(language_id, spell.subtext_localization_id).unwrap().content,
+            subtext: spell.subtext,
             spell_cost,
             range: spell.range_max,
-            description: data.get_localized_spell_description(expansion_id, language_id, spell_id).unwrap_or("?! ERROR ?!".to_owned()),
+            description: spell.description,
         })
     }
 }
