@@ -1,8 +1,22 @@
 <form (ngSubmit)="upload()" formValid ngNativeValidate [class.hide_upload]="disableSubmit">
+    <h4>How to upload logs</h4>
+    <div class="row">
+        <div class="col">
+            <p>Install <a href="https://github.com/pepopo978/SuperWowCombatLogger">SuperWowCombatLogger</a> and it will
+                collect logs for you during raids automatically or manually if you type /combatlog.</p>
+            <p>After raid <a
+                    href="https://github.com/pepopo978/SuperWowCombatLogger?tab=readme-ov-file#preparing-for-upload">
+                follow the "Preparing for upload" instructions </a></p>
+        </div>
+    </div>
+
+    <h4>Upload</h4>
+
     <div class="row">
         <div class="col">
             <label for="server_id">Server</label>
-            <SelectInput id="server_id" [options]="server" [value]="selected_server_id" (valueChange)="selectedServerIdChanges($event)" [themed]="true"></SelectInput>
+            <SelectInput id="server_id" [options]="server" [value]="selected_server_id"
+                         (valueChange)="selectedServerIdChanges($event)" [themed]="true"></SelectInput>
         </div>
     </div>
     <!--
