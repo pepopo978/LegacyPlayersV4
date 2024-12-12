@@ -7,12 +7,13 @@ use crate::modules::armory::Armory;
 use crate::modules::armory::tools::{GetCharacter, SetCharacter};
 use crate::modules::data::Data;
 use crate::modules::data::tools::{RetrieveNPC, RetrieveServer, RetrieveSpell};
-use crate::modules::live_data_processor::dto::{CombatState, InstanceMap, Message, MessageType, SpellCast, Unit, Interrupt};
+use crate::modules::live_data_processor::dto::{CombatState, InstanceMap, Message, MessageType, SpellCast, Unit, Interrupt, get_damage_components_total};
 use crate::modules::live_data_processor::material::{IntervalBucket, Participant, RetrieveActiveMap};
 use crate::modules::live_data_processor::tools::cbl_parser::CombatLogParser;
 use crate::modules::live_data_processor::tools::GUID;
 use crate::util::database::{Execute, Select};
 use crate::modules::live_data_processor::LiveDataProcessor;
+use crate::util::hash_str::hash_str;
 
 pub fn parse_cbl(parser: &mut impl CombatLogParser, live_data_processor: &LiveDataProcessor, db_main: &mut (impl Select + Execute), data: &Data, armory: &Armory, file_content: &str, start_parse: u64, _end_parse: u64, member_id: u32) -> Option<(u32, Vec<Message>)> {
     let mut messages = Vec::with_capacity(1000000);
@@ -201,6 +202,8 @@ pub fn parse_cbl(parser: &mut impl CombatLogParser, live_data_processor: &LiveDa
     let mut looking_for_new_pom_owner = None;
     let mut recent_spell_casts: VecDeque<(u64, SpellCast)> = VecDeque::new();
 
+    let deathknight_understudy_unit_id = hash_str("Deathknight Understudy") & 0x0000FFFFFFFFFFFF;
+
     for Message { timestamp, message_count, message_type, .. } in messages.iter_mut() {
         // Insert Instance Map Messages
         if let Some((map_id, difficulty)) = active_maps.get_current_active_map(&suggested_instances, &player_participants_by_interval, expansion_id, *timestamp) {
@@ -312,6 +315,8 @@ pub fn parse_cbl(parser: &mut impl CombatLogParser, live_data_processor: &LiveDa
             }
         }
 
+
+
         // Insert Combat Start/End Events
         // We assume CBT Start when we see it doing sth
         // We assume end if it dies or after a timeout
@@ -322,6 +327,15 @@ pub fn parse_cbl(parser: &mut impl CombatLogParser, live_data_processor: &LiveDa
                 }
             },
             MessageType::MeleeDamage(dmg) | MessageType::SpellDamage(dmg) => {
+                if dmg.victim.unit_id == deathknight_understudy_unit_id {
+                    let total_dmg = get_damage_components_total(&dmg.damage_components);
+                    if total_dmg > 10000 {
+                        // wipe dmg
+                        dmg.damage_components.clear();
+                        println!("Ignoring bugged damage amt of {} on Deathknight Understudy", total_dmg);
+                    }
+                }
+
                 static IN_COMBAT_DEATH_TIMEOUT: u64 = 180000;
                 static IN_COMBAT_DEATH_IGNORE_IMMEDIATE_TIMEOUT: u64 = 20000;
                 let mut ignore = false;
@@ -345,6 +359,7 @@ pub fn parse_cbl(parser: &mut impl CombatLogParser, live_data_processor: &LiveDa
                 }
 
                 ignore = ignore || dmg.victim.unit_id == 0 || dmg.attacker.unit_id == 0 || dmg.spell_id.contains(&72273) || dmg.spell_id.contains(&72550) | dmg.spell_id.contains(&70598);
+
                 if !ignore {
                     add_combat_event(parser, data, expansion_id, &mut additional_messages, &mut last_combat_update, *timestamp, *message_count, &dmg.attacker);
                     add_combat_event(parser, data, expansion_id, &mut additional_messages, &mut last_combat_update, *timestamp, *message_count, &dmg.victim);

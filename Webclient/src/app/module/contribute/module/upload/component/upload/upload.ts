@@ -43,7 +43,7 @@ export class UploadComponent implements OnDestroy, OnInit {
 
         this.subscription = this.data_service.servers.subscribe(available_servers => {
             this.server = available_servers
-                .filter(server => !server.is_retail && ! server.archived)
+                .filter(server => !server.is_retail && !server.archived)
                 .sort((left, right) => left.expansion_id - right.expansion_id)
                 .map(server => {
                     return {value: server.id, label_key: server.name + " (" + server.patch + ")"};
@@ -77,7 +77,7 @@ export class UploadComponent implements OnDestroy, OnInit {
             // formData.append('end_time', this.selected_end_date);
             formData.append('payload', this.upload_file.nativeElement.files[0]);
             this.uploadService.upload_file(formData, () => {
-                this.notification_service.propagate(Severity.Success, "Your log has been uploaded!");
+                this.notification_service.propagate(Severity.Success, "Your log has been uploaded!  Go to account->uploads to find it.  It may take a minute to appear in your upload list.");
                 this.disableSubmit = false;
                 this.current_progress = 0;
             }, () => {
