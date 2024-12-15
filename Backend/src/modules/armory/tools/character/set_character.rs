@@ -1,6 +1,5 @@
 use crate::util::database::{Execute, Select};
 use crate::{
-    dto::CheckPlausability,
     modules::armory::{
         dto::{ArmoryFailure, CharacterDto},
         material::Character,
@@ -15,11 +14,6 @@ pub trait SetCharacter {
 
 impl SetCharacter for Armory {
     fn set_character(&self, db_main: &mut (impl Execute + Select), server_id: u32, update_character: CharacterDto, timestamp: u64) -> Result<Character, ArmoryFailure> {
-        // Validation
-        if !update_character.is_plausible() {
-            return Err(ArmoryFailure::ImplausibleInput);
-        }
-
         // Create the character if necessary
         let character_id_res = self.create_character(db_main, server_id, update_character.server_uid);
         if character_id_res.is_err() {

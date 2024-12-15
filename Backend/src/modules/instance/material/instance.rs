@@ -62,6 +62,7 @@ impl Instance {
             let armory = Armory::default().init(&mut db_main);
 
             loop {
+                println!("Updating instance data at {}", time_util::now());
                 delete_old_character_data(&mut db_main);
                 evict_attempts_cache(Arc::clone(&instance_attempts_arc_clone));
                 evict_export_cache(Arc::clone(&instance_exports_arc_clone));

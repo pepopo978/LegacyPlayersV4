@@ -17,7 +17,6 @@ use crate::modules::live_data_processor::tools::cbl_parser::wow_vanilla::parse_t
 use crate::modules::live_data_processor::tools::cbl_parser::wow_vanilla::parse_unit::parse_unit;
 use crate::modules::live_data_processor::tools::GUID;
 use crate::modules::armory::tools::strip_talent_specialization;
-
 /*
 
 COMBATHITCRITOTHEROTHER = "%s crits %s for %d.";
@@ -90,6 +89,142 @@ SPELLHAPPINESSDRAINOTHER
 POWERGAINOTHEROTHER
 
  */
+pub const WARRIOR_ARMS_SPEC: &str = "51|0|0";
+pub const WARRIOR_FURY_SPEC: &str = "0|51|0";
+pub const WARRIOR_PROTECTION_SPEC: &str = "0|0|51";
+pub const PALADIN_HOLY_SPEC: &str = "51|0|0";
+pub const PALADIN_PROTECTION_SPEC: &str = "0|51|0";
+pub const PALADIN_RETRIBUTION_SPEC: &str = "0|0|51";
+pub const HUNTER_BEAST_MASTERY_SPEC: &str = "51|0|0";
+pub const HUNTER_MARKSMANSHIP_SPEC: &str = "0|51|0";
+pub const HUNTER_SURVIVAL_SPEC: &str = "0|0|51";
+pub const ROGUE_ASSASSINATION_SPEC: &str = "51|0|0";
+pub const ROGUE_COMBAT_SPEC: &str = "0|51|0";
+pub const ROGUE_SUBTLETY_SPEC: &str = "0|0|51";
+pub const PRIEST_DISCIPLINE_SPEC: &str = "51|0|0";
+pub const PRIEST_SHADOW_SPEC: &str = "0|51|0";
+pub const PRIEST_HOLY_SPEC: &str = "0|0|51";
+pub const SHAMAN_ELEMENTAL_SPEC: &str = "51|0|0";
+pub const SHAMAN_ENHANCEMENT_SPEC: &str = "0|51|0";
+pub const SHAMAN_RESTORATION_SPEC: &str = "0|0|51";
+pub const MAGE_ARCANE_SPEC: &str = "51|0|0";
+pub const MAGE_FIRE_SPEC: &str = "0|51|0";
+pub const MAGE_FROST_SPEC: &str = "0|0|51";
+pub const WARLOCK_AFFLICTION_SPEC: &str = "51|0|0";
+pub const WARLOCK_DEMONOLOGY_SPEC: &str = "0|51|0";
+pub const WARLOCK_DESTRUCTION_SPEC: &str = "0|0|51";
+pub const DRUID_BALANCE_SPEC: &str = "51|0|0";
+pub const DRUID_FERAL_COMBAT_SPEC: &str = "0|51|0";
+pub const DRUID_RESTORATION_SPEC: &str = "0|0|51";
+
+
+fn assign_spec_from_buff_gain(receiver: Option<&mut Participant>, spell: &str) {
+    if receiver.is_none() {
+        return;
+    }
+
+    if spell == "Arcane Eclipse" || spell == "Nature Eclipse" {
+        let p = receiver.unwrap();
+        p.talents = Some(DRUID_BALANCE_SPEC.to_string());
+    } else if spell == "Blood Frenzy" || spell == "Berserk" {
+        let p = receiver.unwrap();
+        p.talents = Some(DRUID_FERAL_COMBAT_SPEC.to_string());
+    } else if spell == "Tidal Surge" {
+        let p = receiver.unwrap();
+        p.talents = Some(SHAMAN_RESTORATION_SPEC.to_string());
+    } else if spell == "Holy Might" {
+        let p = receiver.unwrap();
+        p.talents = Some(PALADIN_RETRIBUTION_SPEC.to_string());
+    } else if spell == "Tree of Life Form" {
+        let p = receiver.unwrap();
+        p.talents = Some(DRUID_RESTORATION_SPEC.to_string());
+    } else if spell == "Arcane Power" {
+        let p = receiver.unwrap();
+        p.talents = Some(MAGE_ARCANE_SPEC.to_string());
+    } else if spell == "Combustion" {
+        let p = receiver.unwrap();
+        p.talents = Some(MAGE_FIRE_SPEC.to_string());
+    } else if spell == "Ice Barrier" {
+        let p = receiver.unwrap();
+        p.talents = Some(MAGE_FROST_SPEC.to_string());
+    } else if spell == "Seal of Command" {
+        let p = receiver.unwrap();
+        p.talents = Some(PALADIN_RETRIBUTION_SPEC.to_string());
+    } else if spell == "Elemental Mastery" {
+        let p = receiver.unwrap();
+        p.talents = Some(SHAMAN_ELEMENTAL_SPEC.to_string());
+    } else if spell == "Stormstrike" {
+        let p = receiver.unwrap();
+        p.talents = Some(SHAMAN_ENHANCEMENT_SPEC.to_string());
+    }
+}
+
+fn assign_spec_from_heal(caster: Option<&mut Participant>, spell: &str) {
+    if caster.is_none() {
+        return;
+    }
+
+    if spell == "Holy Shock" {
+        let p = caster.unwrap();
+        p.talents = Some(PALADIN_HOLY_SPEC.to_string());
+    }
+}
+
+fn assign_spec_from_cast(caster: Option<&mut Participant>, spell: &str) {
+    if caster.is_none() {
+        return;
+    }
+
+    if spell == "Mortal Strike" || spell == "Sweeping Strikes" {
+        let p = caster.unwrap();
+        p.talents = Some(WARRIOR_ARMS_SPEC.to_string());
+    } else if spell == "Bloodthirst" {
+        let p = caster.unwrap();
+        p.talents = Some(WARRIOR_FURY_SPEC.to_string());
+    } else if spell == "Shield Slam" {
+        let p = caster.unwrap();
+        p.talents = Some(WARRIOR_PROTECTION_SPEC.to_string());
+    } else if spell == "Bulwark of the Righteous" {
+        let p = caster.unwrap();
+        p.talents = Some(PALADIN_PROTECTION_SPEC.to_string());
+    } else if spell == "Bestial Wrath" {
+        let p = caster.unwrap();
+        p.talents = Some(HUNTER_BEAST_MASTERY_SPEC.to_string());
+    } else if spell == "Piercing Shots" {
+        let p = caster.unwrap();
+        p.talents = Some(HUNTER_MARKSMANSHIP_SPEC.to_string());
+    } else if spell == "Carve" {
+        let p = caster.unwrap();
+        p.talents = Some(HUNTER_SURVIVAL_SPEC.to_string());
+    } else if spell == "Envenom" {
+        let p = caster.unwrap();
+        p.talents = Some(ROGUE_ASSASSINATION_SPEC.to_string());
+    } else if spell == "Adrenaline Rush" {
+        let p = caster.unwrap();
+        p.talents = Some(ROGUE_COMBAT_SPEC.to_string());
+    } else if spell == "Exploit Vulnerability" {
+        let p = caster.unwrap();
+        p.talents = Some(ROGUE_SUBTLETY_SPEC.to_string());
+    } else if spell == "Enlighten" {
+        let p = caster.unwrap();
+        p.talents = Some(PRIEST_DISCIPLINE_SPEC.to_string());
+    } else if spell == "Proclaim Champion" {
+        let p = caster.unwrap();
+        p.talents = Some(PRIEST_HOLY_SPEC.to_string());
+    } else if spell == "Vampiric Embrace" {
+        let p = caster.unwrap();
+        p.talents = Some(PRIEST_SHADOW_SPEC.to_string());
+    } else if spell == "Dark Harvest" {
+        let p = caster.unwrap();
+        p.talents = Some(WARLOCK_AFFLICTION_SPEC.to_string());
+    } else if spell == "Power Overwhelming" {
+        let p = caster.unwrap();
+        p.talents = Some(WARLOCK_DEMONOLOGY_SPEC.to_string());
+    } else if spell == "Conflagrate" {
+        let p = caster.unwrap();
+        p.talents = Some(WARLOCK_DESTRUCTION_SPEC.to_string());
+    }
+}
 
 impl CombatLogParser for WoWVanillaParser {
     fn parse_cbl_line(&mut self, data: &Data, event_ts: u64, content: &str) -> Option<Vec<MessageType>> {
@@ -150,6 +285,8 @@ impl CombatLogParser for WoWVanillaParser {
             let caster = parse_unit(&mut self.cache_unit, data, captures.get(1)?.as_str())?;
             let spell_id = parse_spell_args(&mut self.cache_spell_id, data, captures.get(2)?.as_str())?;
 
+            assign_spec_from_cast(self.participants.get_mut(&caster.unit_id), captures.get(2)?.as_str());
+
             return Some(vec![MessageType::SpellCastAttempt(SpellCast {
                 caster,
                 target: None,
@@ -172,6 +309,8 @@ impl CombatLogParser for WoWVanillaParser {
             self.collect_active_map(data, &caster, event_ts);
             self.collect_active_map(data, &target, event_ts);
             let effective_heal = self.participants.get_mut(&target.unit_id).unwrap().attribute_heal(amount);
+
+            assign_spec_from_buff_gain(self.participants.get_mut(&caster.unit_id), captures.get(5)?.as_str());
 
             return Some(vec![
                 MessageType::SpellCast(SpellCast {
@@ -208,6 +347,8 @@ impl CombatLogParser for WoWVanillaParser {
             self.collect_active_map(data, &attacker, event_ts);
             self.collect_active_map(data, &victim, event_ts);
             self.participants.get_mut(&victim.unit_id).unwrap().attribute_damage(damage);
+
+            assign_spec_from_cast(self.participants.get_mut(&attacker.unit_id), captures.get(2)?.as_str());
 
             return Some(vec![
                 MessageType::SpellCast(SpellCast {
@@ -257,6 +398,8 @@ impl CombatLogParser for WoWVanillaParser {
             self.collect_active_map(data, &victim, event_ts);
             self.participants.get_mut(&victim.unit_id).unwrap().attribute_damage(damage);
 
+            assign_spec_from_cast(self.participants.get_mut(&attacker.unit_id), captures.get(2)?.as_str());
+
             return Some(vec![
                 MessageType::SpellCast(SpellCast {
                     caster: attacker.clone(),
@@ -305,6 +448,8 @@ impl CombatLogParser for WoWVanillaParser {
             self.collect_active_map(data, &attacker, event_ts);
             self.collect_active_map(data, &victim, event_ts);
             self.participants.get_mut(&victim.unit_id).unwrap().attribute_damage(damage);
+
+            assign_spec_from_cast(self.participants.get_mut(&attacker.unit_id), captures.get(5)?.as_str());
 
             return Some(vec![
                 MessageType::SpellCast(SpellCast {
@@ -462,6 +607,8 @@ impl CombatLogParser for WoWVanillaParser {
             self.collect_active_map(data, &target, event_ts);
             let effective_heal = self.participants.get_mut(&target.unit_id).unwrap().attribute_heal(amount);
 
+            assign_spec_from_heal(self.participants.get_mut(&caster.unit_id), captures.get(2)?.as_str());
+
             return Some(vec![
                 MessageType::SpellCast(SpellCast {
                     caster: caster.clone(),
@@ -493,6 +640,8 @@ impl CombatLogParser for WoWVanillaParser {
             self.collect_active_map(data, &target, event_ts);
             let effective_heal = self.participants.get_mut(&target.unit_id).unwrap().attribute_heal(amount);
 
+            assign_spec_from_heal(self.participants.get_mut(&caster.unit_id), captures.get(2)?.as_str());
+
             return Some(vec![
                 MessageType::SpellCast(SpellCast {
                     caster: caster.clone(),
@@ -522,6 +671,8 @@ impl CombatLogParser for WoWVanillaParser {
             let caster = Unit { is_player: true, unit_id: 0 };
             self.collect_participant(&target, captures.get(1)?.as_str(), event_ts);
             self.collect_active_map(data, &target, event_ts);
+
+            assign_spec_from_buff_gain(self.participants.get_mut(&target.unit_id), captures.get(3)?.as_str());
 
             return Some(vec![MessageType::AuraApplication(AuraApplication {
                 caster,
@@ -599,6 +750,8 @@ impl CombatLogParser for WoWVanillaParser {
             self.collect_active_map(data, &attacker, event_ts);
             self.collect_active_map(data, &victim, event_ts);
 
+            assign_spec_from_cast(self.participants.get_mut(&attacker.unit_id), captures.get(2)?.as_str());
+
             return Some(vec![
                 MessageType::SpellCast(SpellCast {
                     caster: attacker.clone(),
@@ -636,6 +789,8 @@ impl CombatLogParser for WoWVanillaParser {
             self.collect_active_map(data, &attacker, event_ts);
             self.collect_active_map(data, &victim, event_ts);
 
+            assign_spec_from_cast(self.participants.get_mut(&attacker.unit_id), captures.get(2)?.as_str());
+
             return Some(vec![
                 MessageType::SpellCast(SpellCast {
                     caster: attacker.clone(),
@@ -663,6 +818,8 @@ impl CombatLogParser for WoWVanillaParser {
             self.collect_participant(&victim, captures.get(3)?.as_str(), event_ts);
             self.collect_active_map(data, &attacker, event_ts);
             self.collect_active_map(data, &victim, event_ts);
+
+            assign_spec_from_cast(self.participants.get_mut(&attacker.unit_id), captures.get(2)?.as_str());
 
             return Some(vec![
                 MessageType::SpellCast(SpellCast {
@@ -692,6 +849,8 @@ impl CombatLogParser for WoWVanillaParser {
             self.collect_active_map(data, &attacker, event_ts);
             self.collect_active_map(data, &victim, event_ts);
 
+            assign_spec_from_cast(self.participants.get_mut(&attacker.unit_id), captures.get(3)?.as_str());
+
             return Some(vec![
                 MessageType::SpellCast(SpellCast {
                     caster: attacker.clone(),
@@ -719,6 +878,8 @@ impl CombatLogParser for WoWVanillaParser {
             self.collect_participant(&victim, captures.get(3)?.as_str(), event_ts);
             self.collect_active_map(data, &attacker, event_ts);
             self.collect_active_map(data, &victim, event_ts);
+
+            assign_spec_from_cast(self.participants.get_mut(&attacker.unit_id), captures.get(2)?.as_str());
 
             return Some(vec![
                 MessageType::SpellCast(SpellCast {
@@ -748,6 +909,8 @@ impl CombatLogParser for WoWVanillaParser {
             self.collect_active_map(data, &attacker, event_ts);
             self.collect_active_map(data, &victim, event_ts);
 
+            assign_spec_from_cast(self.participants.get_mut(&attacker.unit_id), captures.get(3)?.as_str());
+
             return Some(vec![
                 MessageType::SpellCast(SpellCast {
                     caster: attacker.clone(),
@@ -775,6 +938,8 @@ impl CombatLogParser for WoWVanillaParser {
             self.collect_participant(&victim, captures.get(3)?.as_str(), event_ts);
             self.collect_active_map(data, &attacker, event_ts);
             self.collect_active_map(data, &victim, event_ts);
+
+            assign_spec_from_cast(self.participants.get_mut(&attacker.unit_id), captures.get(2)?.as_str());
 
             return Some(vec![
                 MessageType::SpellCast(SpellCast {
@@ -899,6 +1064,8 @@ impl CombatLogParser for WoWVanillaParser {
             self.collect_active_map(data, &caster, event_ts);
             self.collect_active_map(data, &target, event_ts);
 
+            assign_spec_from_cast(self.participants.get_mut(&caster.unit_id), captures.get(3)?.as_str());
+
             return Some(vec![MessageType::SpellCast(SpellCast {
                 caster,
                 target: Some(target),
@@ -916,6 +1083,8 @@ impl CombatLogParser for WoWVanillaParser {
             self.collect_active_map(data, &caster, event_ts);
             self.collect_active_map(data, &target, event_ts);
 
+            assign_spec_from_cast(self.participants.get_mut(&caster.unit_id), captures.get(3)?.as_str());
+
             return Some(vec![MessageType::SpellCast(SpellCast {
                 caster,
                 target: Some(target),
@@ -929,6 +1098,8 @@ impl CombatLogParser for WoWVanillaParser {
             let spell_id = parse_spell_args(&mut self.cache_spell_id, data, captures.get(3)?.as_str())?;
             self.collect_participant(&caster, captures.get(1)?.as_str(), event_ts);
             self.collect_active_map(data, &caster, event_ts);
+
+            assign_spec_from_cast(self.participants.get_mut(&caster.unit_id), captures.get(3)?.as_str());
 
             return Some(vec![MessageType::SpellCast(SpellCast {
                 caster,
@@ -1307,7 +1478,7 @@ impl CombatLogParser for WoWVanillaParser {
                                     gender: participant.gender_id.unwrap_or(false),
                                     profession1: None,
                                     profession2: None,
-                                    talent_specialization: None,
+                                    talent_specialization: participant.talents.clone(),
                                     race_id: participant.race_id.unwrap_or(1),
                                 },
                                 character_name: participant.name.clone(),
@@ -1326,6 +1497,8 @@ impl CombatLogParser for WoWVanillaParser {
                             }),
                         },
                     ));
+                    // only save the first gear setup
+                    break;
                 }
             } else {
                 acc.push((
@@ -1361,7 +1534,7 @@ impl CombatLogParser for WoWVanillaParser {
                                 gender: participant.gender_id.unwrap_or(false),
                                 profession1: None,
                                 profession2: None,
-                                talent_specialization: None,
+                                talent_specialization: participant.talents.clone(),
                                 race_id: participant.race_id.unwrap_or(1),
                             },
                             character_name: participant.name.clone(),
