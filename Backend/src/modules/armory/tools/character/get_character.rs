@@ -86,16 +86,21 @@ impl GetCharacter for Armory {
         // Use Option to handle uninitialized values
         let mut closest_history_moment: Option<&HistoryMoment> = None;
 
-        // First, look for moments with talent specialization within 1 hour
+        // First, look for moments with talent specialization within 6 hour
         let ids: Vec<u32> = db_main.select_wparams(
             "SELECT t1.id FROM armory_character_history t1 \
-         JOIN armory_character_info t2 ON t1.character_info_id = t2.id \
-         WHERE t1.character_id = :character_id \
-         AND t2.talent_specialization IS NOT NULL \
-         AND ABS(CASE WHEN t1.timestamp >= :timestamp THEN t1.timestamp - :timestamp ELSE :timestamp - t1.timestamp END) < 3600",
+             JOIN armory_character_info t2 ON t1.character_info_id = t2.id \
+             WHERE t1.character_id = :character_id \
+               AND t2.talent_specialization IS NOT NULL \
+               AND t1.timestamp BETWEEN (:timestamp - :max_timestamp) AND (:timestamp + :max_timestamp)",
             |mut row| row.take(0).unwrap(),
-            params! { "character_id" => character_id, "timestamp" => timestamp },
+            params! {
+                "character_id" => character_id,
+                "timestamp" => timestamp,
+                "max_timestamp" => 21600
+            },
         );
+
 
         for id in ids {
             for moment in &character.history_moments {
@@ -106,7 +111,6 @@ impl GetCharacter for Armory {
                         - closest_history_moment.unwrap().timestamp as i64)
                         .abs()
                     {
-                        println!("Found moment with talent specialization for character {}", character_id);
                         closest_history_moment = Some(moment);
                     }
                 }
@@ -122,7 +126,6 @@ impl GetCharacter for Armory {
                     - closest_history_moment.unwrap().timestamp as i64)
                     .abs()
                 {
-                    println!("Found moment without talent specialization for character {}", character_id);
                     closest_history_moment = Some(moment);
                 }
             }

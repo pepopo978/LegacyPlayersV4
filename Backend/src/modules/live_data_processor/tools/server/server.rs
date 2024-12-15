@@ -639,7 +639,7 @@ impl Server {
 
             // Maybe sanity check, if active instance already exists, before?
             if db_main.execute_wparams(
-                "INSERT INTO instance_meta (`server_id`, `start_ts`, `instance_id`, `map_id`, `upload_id`, `privacy_type`) VALUES (:server_id, :start_ts, :instance_id, :map_id, :upload_id, :privacy_type)",
+                "INSERT INTO instance_meta (`server_id`, `start_ts`, `instance_id`, `map_id`, `upload_id`, `privacy_type`, `updated_specs`) VALUES (:server_id, :start_ts, :instance_id, :map_id, :upload_id, :privacy_type, 1)",
                 params!(
                 "server_id" => self.server_id,
                 "start_ts" => start_ts,

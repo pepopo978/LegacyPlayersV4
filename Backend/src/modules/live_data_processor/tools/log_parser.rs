@@ -15,7 +15,16 @@ use crate::util::database::{Execute, Select};
 use crate::modules::live_data_processor::LiveDataProcessor;
 use crate::util::hash_str::hash_str;
 
-pub fn parse_cbl(parser: &mut impl CombatLogParser, live_data_processor: &LiveDataProcessor, db_main: &mut (impl Select + Execute), data: &Data, armory: &Armory, file_content: &str, start_parse: u64, _end_parse: u64, member_id: u32) -> Option<(u32, Vec<Message>)> {
+pub fn parse_cbl(parser: &mut impl CombatLogParser,
+                 live_data_processor: &LiveDataProcessor,
+                 db_main: &mut (impl Select + Execute),
+                 data: &Data,
+                 armory: &Armory,
+                 file_content: &str,
+                 start_parse: u64,
+                 _end_parse: u64,
+                 member_id: u32,
+                 only_parse_characters: bool) -> Option<(u32, Vec<Message>)> {
     let mut messages = Vec::with_capacity(1000000);
 
     // Pre processing
@@ -35,9 +44,8 @@ pub fn parse_cbl(parser: &mut impl CombatLogParser, live_data_processor: &LiveDa
                 let last_year = timestamp - Duration::days(365);
                 println!("{}", last_year);
                 event_timestamp = last_year.timestamp_millis() as u64;
-            }
-            else {
-            event_timestamp = timestamp.timestamp_millis() as u64;
+            } else {
+                event_timestamp = timestamp.timestamp_millis() as u64;
             }
             /*
             if event_timestamp < start_parse || event_timestamp > end_parse {
@@ -139,6 +147,10 @@ pub fn parse_cbl(parser: &mut impl CombatLogParser, live_data_processor: &LiveDa
     }
     println!("Stop Char processing");
 
+    if only_parse_characters {
+        return Some((server_id, messages));
+    }
+
     // Pre-fill instance ids
     let bonus_messages = parser.get_bonus_messages().unwrap_or_else(Vec::new);
     let mut instance_ids = HashMap::new();
@@ -154,6 +166,11 @@ pub fn parse_cbl(parser: &mut impl CombatLogParser, live_data_processor: &LiveDa
             }
             suggested_instances.push((*timestamp, map.map_id as u16, map.map_difficulty));
         }
+    }
+
+    // if length messages is 0
+    if messages.len() == 0 {
+        return None;
     }
 
     let msg_start = messages[0].timestamp;
@@ -292,7 +309,7 @@ pub fn parse_cbl(parser: &mut impl CombatLogParser, live_data_processor: &LiveDa
                             *message_count - 1,
                             MessageType::Interrupt(Interrupt {
                                 target: spell_cast.caster.clone(),
-                                interrupted_spell_id: spell_cast.spell_id
+                                interrupted_spell_id: spell_cast.spell_id,
                             }),
                         ));
                         recent_spell_casts.remove(index);
@@ -304,7 +321,6 @@ pub fn parse_cbl(parser: &mut impl CombatLogParser, live_data_processor: &LiveDa
         }
 
 
-
         // Insert Combat Start/End Events
         // We assume CBT Start when we see it doing sth
         // We assume end if it dies or after a timeout
@@ -313,7 +329,7 @@ pub fn parse_cbl(parser: &mut impl CombatLogParser, live_data_processor: &LiveDa
                 if !cast.caster.is_player {
                     recent_spell_casts.push_back((*timestamp, cast.clone()));
                 }
-            },
+            }
             MessageType::MeleeDamage(dmg) | MessageType::SpellDamage(dmg) => {
                 if dmg.victim.unit_id == deathknight_understudy_unit_id {
                     let total_dmg = get_damage_components_total(&dmg.damage_components);

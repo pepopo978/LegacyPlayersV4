@@ -156,6 +156,15 @@ fn assign_spec_from_buff_gain(receiver: Option<&mut Participant>, spell: &str) {
     } else if spell == "Stormstrike" {
         let p = receiver.unwrap();
         p.talents = Some(SHAMAN_ENHANCEMENT_SPEC.to_string());
+    } else if spell == "Envenom" {
+        let p = receiver.unwrap();
+        p.talents = Some(ROGUE_ASSASSINATION_SPEC.to_string());
+    } else if spell == "Adrenaline Rush" {
+        let p = receiver.unwrap();
+        p.talents = Some(ROGUE_COMBAT_SPEC.to_string());
+    } else if spell == "Preparation" {
+        let p = receiver.unwrap();
+        p.talents = Some(ROGUE_SUBTLETY_SPEC.to_string());
     }
 }
 
@@ -196,15 +205,6 @@ fn assign_spec_from_cast(caster: Option<&mut Participant>, spell: &str) {
     } else if spell == "Carve" {
         let p = caster.unwrap();
         p.talents = Some(HUNTER_SURVIVAL_SPEC.to_string());
-    } else if spell == "Envenom" {
-        let p = caster.unwrap();
-        p.talents = Some(ROGUE_ASSASSINATION_SPEC.to_string());
-    } else if spell == "Adrenaline Rush" {
-        let p = caster.unwrap();
-        p.talents = Some(ROGUE_COMBAT_SPEC.to_string());
-    } else if spell == "Exploit Vulnerability" {
-        let p = caster.unwrap();
-        p.talents = Some(ROGUE_SUBTLETY_SPEC.to_string());
     } else if spell == "Enlighten" {
         let p = caster.unwrap();
         p.talents = Some(PRIEST_DISCIPLINE_SPEC.to_string());
@@ -1503,7 +1503,7 @@ impl CombatLogParser for WoWVanillaParser {
             } else {
                 acc.push((
                     None,
-                    time_util::now() * 1000,
+                    participant.last_seen,
                     CharacterDto {
                         server_uid: participant.id,
                         character_history: Some(CharacterHistoryDto {

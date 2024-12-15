@@ -26,6 +26,12 @@ impl SetCharacterHistory for Armory {
             .as_ref()
             .and_then(|chr_guild_dto| self.create_guild(db_main, server_id, chr_guild_dto.guild.clone()).ok().map(|gld| gld.id));
 
+        // delete any history in the database with the same timestamp
+        let character_id = character_id_res.unwrap();
+
+        let query = format!("DELETE FROM armory_character_history WHERE character_id = {} AND timestamp = {}", character_id, timestamp/1000);
+        db_main.execute_one(&query);
+
         self.create_character_history(db_main, server_id, update_character_history, character_uid, timestamp)
     }
 }

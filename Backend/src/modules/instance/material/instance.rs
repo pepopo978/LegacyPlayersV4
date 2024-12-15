@@ -1,4 +1,6 @@
 use std::collections::HashMap;
+use std::fs::File;
+use std::io::Read;
 use std::sync::{Arc, RwLock};
 
 use crate::material::Cachable;
@@ -8,9 +10,14 @@ use crate::modules::armory::util::talent_tree::get_talent_tree;
 use crate::modules::instance::domain_value::{InstanceAttempt, InstanceMeta, MetaType, PrivacyType};
 use crate::modules::instance::dto::{InstanceViewerAttempt, RankingResult, SpeedKill, SpeedRun};
 use crate::modules::instance::tools::FindInstanceGuild;
-use crate::params;
+use crate::{mysql, params};
 use crate::util::database::*;
 use chrono::{NaiveDateTime, Datelike};
+use zip::ZipArchive;
+use crate::modules::data::Data;
+use crate::modules::live_data_processor::tools::log_parser::parse_cbl;
+use crate::modules::live_data_processor::dto::{LiveDataProcessorFailure};
+use crate::mysql::Opts;
 
 pub struct Instance {
     pub instance_metas: Arc<RwLock<(u32, HashMap<u32, InstanceMeta>)>>,
@@ -57,6 +64,13 @@ impl Instance {
 
         let mut startup = true;
 
+        let dns = std::env::var("MYSQL_URL").unwrap();
+        let opts = Opts::from_url(&dns).unwrap();
+        let mut conn = mysql::Conn::new(opts.clone()).unwrap();
+
+        let data = Data::default().init(&mut conn);
+        let live_data_processor = crate::modules::live_data_processor::LiveDataProcessor::default().init(&mut conn);
+
         std::thread::spawn(move || {
             let mut armory_counter = 1;
             let armory = Armory::default().init(&mut db_main);
@@ -71,25 +85,78 @@ impl Instance {
 
                 if startup || armory_counter >= 1000 {
                     // purge old character info
-
+                    println!("Updating rankings at {}", time_util::now());
                     update_instance_rankings_dps(Arc::clone(&instance_rankings_dps_arc_clone), &mut db_main, &armory);
                     update_instance_rankings_hps(Arc::clone(&instance_rankings_hps_arc_clone), &mut db_main, &armory);
                     update_instance_rankings_tps(Arc::clone(&instance_rankings_tps_arc_clone), &mut db_main, &armory);
+                    println!("Updating rankings complete at {}", time_util::now());
+
+                    println!("Updating speed runs at {}", time_util::now());
                     calculate_speed_runs(Arc::clone(&instance_metas_arc_clone),
                                          Arc::clone(&instance_kill_attempts_clone),
                                          Arc::clone(&speed_runs_arc_clone), &mut db_main, &armory);
                     calculate_speed_kills(Arc::clone(&instance_metas_arc_clone),
                                           Arc::clone(&instance_kill_attempts_clone),
                                           Arc::clone(&speed_kills_arc_clone), &mut db_main, &armory);
-                    armory.update(&mut db_main);
+                    println!("Updating speed runs complete at {}", time_util::now());
                     armory_counter = 0;
                     startup = false;
                 }
 
+                // loop through instance metas that don't have updated specs
+                let instance_metas = instance_metas_arc_clone.read().unwrap();
+                for (instance_meta_id, instance_meta) in instance_metas.1.iter().filter(|(_, instance_meta)| !instance_meta.updated_specs) {
+                    let storage_path = std::env::var("INSTANCE_STORAGE_PATH").expect("storage path must be set");
+                    let zip_path = format!("{}/zips/upload_{}.zip", storage_path, instance_meta.upload_id);
+                    let file = File::open(zip_path).map_err(|_| LiveDataProcessorFailure::InvalidZipFile);
+
+                    if let Ok(file) = file {
+                        // Create a ZipArchive from the file
+                        let zip = ZipArchive::new(file).map_err(|_| LiveDataProcessorFailure::InvalidZipFile);
+
+                        if let Ok(mut zip) = zip {
+                            let log_file = zip.by_index(0).map_err(|_| LiveDataProcessorFailure::InvalidZipFile);
+
+                            if let Ok(log_file) = log_file {
+                                let bytes = log_file.bytes().filter_map(|byte| byte.ok()).collect::<Vec<u8>>();
+                                let mut content = Vec::new();
+                                for slice in bytes.split(|c| *c == 10) {
+                                    if let Ok(parsed_str) = std::str::from_utf8(slice) {
+                                        content.push(parsed_str);
+                                    }
+                                }
+                                let content = content.join("\n");
+
+                                println!("Updating specs for instance meta {}", instance_meta_id);
+                                let mut combat_log_parser = crate::modules::live_data_processor::material::WoWVanillaParser::new(instance_meta.server_id);
+
+                                parse_cbl(&mut combat_log_parser,
+                                          &live_data_processor,
+                                          &mut conn,
+                                          &data,
+                                          &armory,
+                                          &content,
+                                          instance_meta.start_ts,
+                                          instance_meta.end_ts.unwrap_or(instance_meta.start_ts),
+                                          instance_meta.uploaded_user,
+                                          false);
+
+                                // mark instance meta as updated
+                                db_main.execute_wparams("UPDATE instance_meta SET updated_specs = 1 WHERE id = :instance_meta_id",
+                                                        params!("instance_meta_id" => instance_meta_id));
+
+                                break; // only parse one instance meta per loop  so that new logs will still appear
+                            }
+                        }
+                    }
+                }
+
+                armory.update(&mut db_main);
                 armory_counter += 1;
                 std::thread::sleep(std::time::Duration::from_secs(30));
             }
         });
+
         self
     }
 
@@ -169,7 +236,7 @@ fn calculate_speed_runs(instance_metas: Arc<RwLock<(u32, HashMap<u32, InstanceMe
             server_id: instance_meta.server_id,
             duration: end - start,
             difficulty_id: attempts[0].difficulty_id,
-            season_index: attempts[0].season_index
+            season_index: attempts[0].season_index,
         });
     }
 }
@@ -206,7 +273,7 @@ fn calculate_speed_kills(instance_metas: Arc<RwLock<(u32, HashMap<u32, InstanceM
                 server_id: instance_meta.server_id,
                 duration: attempt.end_ts - attempt.start_ts,
                 difficulty_id: attempt.difficulty_id,
-                season_index: attempt.season_index
+                season_index: attempt.season_index,
             });
         }
     }
@@ -241,7 +308,7 @@ fn update_instance_kill_attempts(instance_kill_attempts: Arc<RwLock<(u32, HashMa
                                        is_kill: true,
                                        difficulty_id: row.take(5).unwrap(),
                                        rankable: row.take(6).unwrap(),
-                                       season_index: calculate_season_index(start_ts)
+                                       season_index: calculate_season_index(start_ts),
                                    })
                                }, params!("saved_attempt_id" => kill_attempts.0))
         .into_iter()
@@ -299,7 +366,7 @@ fn update_instance_rankings_dps(instance_rankings_dps: Arc<RwLock<(u32, HashMap<
                 character_spec: armory.get_character_moment(db_main, character_id, start_ts)
                     .and_then(|char_history| char_history.character_info.talent_specialization.as_ref().map(|talents| get_talent_tree(&talents) + 1))
                     .unwrap_or(0),
-                season_index: calculate_season_index(start_ts)
+                season_index: calculate_season_index(start_ts),
             });
         });
 }
@@ -351,7 +418,7 @@ fn update_instance_rankings_hps(instance_rankings_hps: Arc<RwLock<(u32, HashMap<
                 character_spec: armory.get_character_moment(db_main, character_id, start_ts)
                     .and_then(|char_history| char_history.character_info.talent_specialization.as_ref().map(|talents| get_talent_tree(&talents) + 1))
                     .unwrap_or(0),
-                season_index: calculate_season_index(start_ts)
+                season_index: calculate_season_index(start_ts),
             });
         });
 }
@@ -403,7 +470,7 @@ fn update_instance_rankings_tps(instance_rankings_tps: Arc<RwLock<(u32, HashMap<
                 character_spec: armory.get_character_moment(db_main, character_id, start_ts)
                     .and_then(|char_history| char_history.character_info.talent_specialization.as_ref().map(|talents| get_talent_tree(&talents) + 1))
                     .unwrap_or(0),
-                season_index: calculate_season_index(start_ts)
+                season_index: calculate_season_index(start_ts),
             });
         });
 }
@@ -434,7 +501,7 @@ fn evict_export_cache(instance_exports: Arc<RwLock<HashMap<(u32, u8), Cachable<V
     }
 }
 
-fn delete_old_character_data(db_main: &mut (impl  Select + Execute)) {
+fn delete_old_character_data(db_main: &mut (impl Select + Execute)) {
     // delete old armory_character_info
     db_main.execute_one(
         "delete FROM main.armory_character_info where id not in (SELECT character_info_id FROM main.armory_character_history);"
@@ -453,7 +520,7 @@ fn update_instance_metas(instance_metas: Arc<RwLock<(u32, HashMap<u32, InstanceM
     // Raids
     db_main
         .select_wparams(
-            "SELECT A.id, A.server_id, A.start_ts, A.end_ts, A.expired, A.map_id, B.map_difficulty, C.member_id, A.upload_id, A.privacy_type, A.privacy_ref FROM instance_meta A \
+            "SELECT A.id, A.server_id, A.start_ts, A.end_ts, A.expired, A.map_id, B.map_difficulty, C.member_id, A.upload_id, A.privacy_type, A.privacy_ref, A.updated_specs FROM instance_meta A \
             JOIN instance_raid B ON A.id = B.instance_meta_id \
             JOIN instance_uploads C ON A.upload_id = C.id \
             WHERE A.id > :saved_instance_meta_id ORDER BY A.id",
@@ -471,6 +538,7 @@ fn update_instance_metas(instance_metas: Arc<RwLock<(u32, HashMap<u32, InstanceM
                 uploaded_user: row.take(7).unwrap(),
                 upload_id: row.take(8).unwrap(),
                 privacy_type: PrivacyType::new(row.take(9).unwrap(), row.take(10).unwrap()),
+                updated_specs: row.take(11).unwrap(),
             }, params.clone(),
         )
         .into_iter()
@@ -484,7 +552,7 @@ fn update_instance_metas(instance_metas: Arc<RwLock<(u32, HashMap<u32, InstanceM
     db_main
         .select_wparams(
             "SELECT A.id, A.server_id, A.start_ts, A.end_ts, A.expired, A.map_id, B.winner, \
-            B.team_id1, B.team_id2, B.team_change1, B.team_change2, C.member_id, A.upload_id, A.privacy_type, A.privacy_ref FROM instance_meta A \
+            B.team_id1, B.team_id2, B.team_change1, B.team_change2, C.member_id, A.upload_id, A.privacy_type, A.privacy_ref, A.updated_specs FROM instance_meta A \
             JOIN instance_rated_arena B ON A.id = B.instance_meta_id \
             JOIN instance_uploads C ON A.upload_id = C.id \
             WHERE A.id > :saved_instance_meta_id ORDER BY A.id",
@@ -505,11 +573,12 @@ fn update_instance_metas(instance_metas: Arc<RwLock<(u32, HashMap<u32, InstanceM
                     row.take::<u32, usize>(12).unwrap(),
                     row.take::<u8, usize>(13).unwrap(),
                     row.take::<u32, usize>(14).unwrap(),
+                    row.take::<bool, usize>(15).unwrap(),
                 )
             }, params.clone(),
         )
         .into_iter()
-        .for_each(|(instance_meta_id, server_id, start_ts, end_ts, expired, map_id, winner, team_id1, team_id2, team1_change, team2_change, uploaded_user, upload_id, privacy_type, privacy_ref)| {
+        .for_each(|(instance_meta_id, server_id, start_ts, end_ts, expired, map_id, winner, team_id1, team_id2, team1_change, team2_change, uploaded_user, upload_id, privacy_type, privacy_ref, updated_specs)| {
             instance_metas.1.insert(
                 instance_meta_id,
                 InstanceMeta {
@@ -530,6 +599,7 @@ fn update_instance_metas(instance_metas: Arc<RwLock<(u32, HashMap<u32, InstanceM
                     uploaded_user,
                     upload_id,
                     privacy_type: PrivacyType::new(privacy_type, privacy_ref),
+                    updated_specs,
                 },
             );
         });
@@ -537,7 +607,7 @@ fn update_instance_metas(instance_metas: Arc<RwLock<(u32, HashMap<u32, InstanceM
     // Skirmishes
     db_main
         .select_wparams(
-            "SELECT A.id, A.server_id, A.start_ts, A.end_ts, A.expired, A.map_id, B.winner, C.member_id, A.upload_id, A.privacy_type, A.privacy_ref FROM instance_meta A \
+            "SELECT A.id, A.server_id, A.start_ts, A.end_ts, A.expired, A.map_id, B.winner, C.member_id, A.upload_id, A.privacy_type, A.privacy_ref, A.updated_specs FROM instance_meta A \
             JOIN instance_skirmish B ON A.id = B.instance_meta_id \
             JOIN instance_uploads C ON A.upload_id = C.id \
             WHERE A.id > :saved_instance_meta_id ORDER BY A.id",
@@ -555,6 +625,7 @@ fn update_instance_metas(instance_metas: Arc<RwLock<(u32, HashMap<u32, InstanceM
                 uploaded_user: row.take(7).unwrap(),
                 upload_id: row.take(8).unwrap(),
                 privacy_type: PrivacyType::new(row.take(9).unwrap(), row.take(10).unwrap()),
+                updated_specs: row.take(11).unwrap(),
             }, params.clone(),
         )
         .into_iter()
@@ -566,7 +637,7 @@ fn update_instance_metas(instance_metas: Arc<RwLock<(u32, HashMap<u32, InstanceM
     db_main
         .select_wparams(
             "SELECT A.id, A.server_id, A.start_ts, A.end_ts, A.expired, A.map_id, B.winner, \
-            B.score_alliance, B.score_horde, C.member_id, A.upload_id, A.privacy_type, A.privacy_ref FROM instance_meta A \
+            B.score_alliance, B.score_horde, C.member_id, A.upload_id, A.privacy_type, A.privacy_ref, A.updated_specs FROM instance_meta A \
             JOIN instance_battleground B ON A.id = B.instance_meta_id \
             JOIN instance_uploads C ON A.upload_id = C.id \
             WHERE A.id > :saved_instance_meta_id ORDER BY A.id",
@@ -586,6 +657,7 @@ fn update_instance_metas(instance_metas: Arc<RwLock<(u32, HashMap<u32, InstanceM
                 uploaded_user: row.take(9).unwrap(),
                 upload_id: row.take(10).unwrap(),
                 privacy_type: PrivacyType::new(row.take(11).unwrap(), row.take(12).unwrap()),
+                updated_specs: row.take(13).unwrap(),
             }, params.clone(),
         )
         .into_iter()

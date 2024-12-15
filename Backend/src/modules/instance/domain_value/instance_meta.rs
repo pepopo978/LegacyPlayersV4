@@ -13,4 +13,5 @@ pub struct InstanceMeta {
     pub uploaded_user: u32,
     pub upload_id: u32,
     pub privacy_type: PrivacyType,
+    pub updated_specs: bool
 }

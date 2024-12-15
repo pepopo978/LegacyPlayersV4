@@ -157,7 +157,7 @@ pub fn get_upload_progress(me: State<LiveDataProcessor>, auth: Authenticate) -> 
 }
 
 fn parse(me: &LiveDataProcessor, mut parser: impl CombatLogParser, db_main: &mut (impl Select + Execute), data: &DataMaterial, armory: &Armory, content: &str, start_time: u64, end_time: u64, member_id: u32, upload_id: u32) -> Result<(), LiveDataProcessorFailure> {
-    if let Some((server_id, messages)) = parse_cbl(&mut parser, &me, &mut *db_main, data, armory, content, start_time, end_time, member_id) {
+    if let Some((server_id, messages)) = parse_cbl(&mut parser, &me, &mut *db_main, data, armory, content, start_time, end_time, member_id, false) {
         return me.process_messages(&mut *db_main, server_id as u32, &armory, &data, messages, member_id, upload_id);
     }
     Err(LiveDataProcessorFailure::InvalidInput)

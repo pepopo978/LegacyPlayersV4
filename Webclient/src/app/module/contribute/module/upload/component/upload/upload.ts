@@ -77,7 +77,7 @@ export class UploadComponent implements OnDestroy, OnInit {
             // formData.append('end_time', this.selected_end_date);
             formData.append('payload', this.upload_file.nativeElement.files[0]);
             this.uploadService.upload_file(formData, () => {
-                this.notification_service.propagate(Severity.Success, "Your log has been uploaded!  Go to account->uploads to find it.  It may take a minute to appear in your upload list.");
+                this.notification_service.propagate(Severity.Success, "Your log has been uploaded!  Go to Account->Uploads to find it.  It may take a minute to appear in your upload list.");
                 this.disableSubmit = false;
                 this.current_progress = 0;
             }, () => {

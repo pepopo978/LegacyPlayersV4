@@ -14,7 +14,6 @@ const cache_first_permanent = [
 
 const cache_first_shortly = [
     "/API/data/server",
-    "/API/armory/character/",
     "/API/armory/character_viewer/by_date/",
 ];
 
@@ -35,6 +34,7 @@ const stale_while_revalidate_destinations = [
 const network_first = [
     "/API/instance",
     "/API/account",
+    "/API/armory/character/",
     "/API/armory/character_viewer/",
 ];
 
