@@ -9,7 +9,7 @@ use crate::modules::armory::tools::{GetArenaTeam, GetCharacter};
 use crate::modules::armory::util::talent_tree::get_talent_tree;
 use crate::modules::instance::domain_value::{InstanceAttempt, InstanceMeta, MetaType, PrivacyType};
 use crate::modules::instance::dto::{InstanceViewerAttempt, RankingResult, SpeedKill, SpeedRun};
-use crate::modules::instance::tools::FindInstanceGuild;
+use crate::modules::instance::tools::{FindInstanceGuild};
 use crate::{mysql, params};
 use crate::util::database::*;
 use chrono::{NaiveDateTime, Datelike};
@@ -55,12 +55,12 @@ impl Instance {
         let instance_metas_arc_clone = Arc::clone(&self.instance_metas);
         let instance_exports_arc_clone = Arc::clone(&self.instance_exports);
         let instance_attempts_arc_clone = Arc::clone(&self.instance_attempts);
-        let instance_rankings_dps_arc_clone = Arc::clone(&self.instance_rankings_dps);
-        let instance_rankings_hps_arc_clone = Arc::clone(&self.instance_rankings_hps);
-        let instance_rankings_tps_arc_clone = Arc::clone(&self.instance_rankings_tps);
+        // let instance_rankings_dps_arc_clone = Arc::clone(&self.instance_rankings_dps);
+        // let instance_rankings_hps_arc_clone = Arc::clone(&self.instance_rankings_hps);
+        // let instance_rankings_tps_arc_clone = Arc::clone(&self.instance_rankings_tps);
         let instance_kill_attempts_clone = Arc::clone(&self.instance_kill_attempts);
-        let speed_runs_arc_clone = Arc::clone(&self.speed_runs);
-        let speed_kills_arc_clone = Arc::clone(&self.speed_kills);
+        // let speed_runs_arc_clone = Arc::clone(&self.speed_runs);
+        // let speed_kills_arc_clone = Arc::clone(&self.speed_kills);
 
         let mut startup = true;
 
@@ -83,29 +83,55 @@ impl Instance {
                 update_instance_metas(Arc::clone(&instance_metas_arc_clone), &mut db_main, &armory);
                 update_instance_kill_attempts(Arc::clone(&instance_kill_attempts_clone), &mut db_main);
 
-                if startup || armory_counter >= 1000 {
-                    // purge old character info
-                    println!("Updating rankings at {}", time_util::now());
-                    update_instance_rankings_dps(Arc::clone(&instance_rankings_dps_arc_clone), &mut db_main, &armory);
-                    update_instance_rankings_hps(Arc::clone(&instance_rankings_hps_arc_clone), &mut db_main, &armory);
-                    update_instance_rankings_tps(Arc::clone(&instance_rankings_tps_arc_clone), &mut db_main, &armory);
-                    println!("Updating rankings complete at {}", time_util::now());
+                // if startup || armory_counter >= 1000 {
+                //     // purge old character info
+                //     println!("Updating rankings at {}", time_util::now());
+                //     update_instance_rankings_dps(Arc::clone(&instance_rankings_dps_arc_clone), &mut db_main, &armory);
+                //     update_instance_rankings_hps(Arc::clone(&instance_rankings_hps_arc_clone), &mut db_main, &armory);
+                //     update_instance_rankings_tps(Arc::clone(&instance_rankings_tps_arc_clone), &mut db_main, &armory);
+                //     println!("Updating rankings complete at {}", time_util::now());
+                //
+                //     println!("Updating speed runs at {}", time_util::now());
+                //     calculate_speed_runs(Arc::clone(&instance_metas_arc_clone),
+                //                          Arc::clone(&instance_kill_attempts_clone),
+                //                          Arc::clone(&speed_runs_arc_clone), &mut db_main, &armory);
+                //     calculate_speed_kills(Arc::clone(&instance_metas_arc_clone),
+                //                           Arc::clone(&instance_kill_attempts_clone),
+                //                           Arc::clone(&speed_kills_arc_clone), &mut db_main, &armory);
+                //     println!("Updating speed runs complete at {}", time_util::now());
+                //     armory_counter = 0;
+                //     startup = false;
+                // }
 
-                    println!("Updating speed runs at {}", time_util::now());
-                    calculate_speed_runs(Arc::clone(&instance_metas_arc_clone),
-                                         Arc::clone(&instance_kill_attempts_clone),
-                                         Arc::clone(&speed_runs_arc_clone), &mut db_main, &armory);
-                    calculate_speed_kills(Arc::clone(&instance_metas_arc_clone),
-                                          Arc::clone(&instance_kill_attempts_clone),
-                                          Arc::clone(&speed_kills_arc_clone), &mut db_main, &armory);
-                    println!("Updating speed runs complete at {}", time_util::now());
-                    armory_counter = 0;
-                    startup = false;
-                }
-
-                // loop through instance metas that don't have updated specs
-                let instance_metas = instance_metas_arc_clone.read().unwrap();
-                for (instance_meta_id, instance_meta) in instance_metas.1.iter().filter(|(_, instance_meta)| !instance_meta.updated_specs) {
+                // update an instance metas that doesn't have updated specs
+                if let Some(instance_meta) = db_main
+                    .select(
+                        "SELECT A.id, A.server_id, A.start_ts, A.end_ts, A.expired, A.map_id, B.map_difficulty, C.member_id, A.upload_id, A.privacy_type, A.privacy_ref, A.updated_specs \
+         FROM instance_meta A \
+         JOIN instance_raid B ON A.id = B.instance_meta_id \
+         JOIN instance_uploads C ON A.upload_id = C.id \
+         WHERE A.updated_specs = 0 \
+         LIMIT 1", // Restrict to one result
+                        |mut row| InstanceMeta {
+                            instance_meta_id: row.take(0).unwrap(),
+                            server_id: row.take(1).unwrap(),
+                            start_ts: row.take(2).unwrap(),
+                            end_ts: row.take_opt(3).unwrap().ok(),
+                            expired: row.take_opt(4).unwrap().ok(),
+                            map_id: row.take(5).unwrap(),
+                            participants: Vec::new(),
+                            instance_specific: MetaType::Raid {
+                                map_difficulty: row.take::<u8, usize>(6).unwrap(),
+                            },
+                            uploaded_user: row.take(7).unwrap(),
+                            upload_id: row.take(8).unwrap(),
+                            privacy_type: PrivacyType::new(row.take(9).unwrap(), row.take(10).unwrap()),
+                            updated_specs: row.take(11).unwrap(),
+                        },
+                    )
+                    .into_iter()
+                    .next() // Extract the first (and only) result
+                {
                     let storage_path = std::env::var("INSTANCE_STORAGE_PATH").expect("storage path must be set");
                     let zip_path = format!("{}/zips/upload_{}.zip", storage_path, instance_meta.upload_id);
                     let file = File::open(zip_path).map_err(|_| LiveDataProcessorFailure::InvalidZipFile);
@@ -127,7 +153,7 @@ impl Instance {
                                 }
                                 let content = content.join("\n");
 
-                                println!("Updating specs for instance meta {}", instance_meta_id);
+                                println!("Updating specs for instance meta {}", instance_meta.instance_meta_id);
                                 let mut combat_log_parser = crate::modules::live_data_processor::material::WoWVanillaParser::new(instance_meta.server_id);
 
                                 parse_cbl(&mut combat_log_parser,
@@ -141,11 +167,11 @@ impl Instance {
                                           instance_meta.uploaded_user,
                                           false);
 
+
                                 // mark instance meta as updated
                                 db_main.execute_wparams("UPDATE instance_meta SET updated_specs = 1 WHERE id = :instance_meta_id",
-                                                        params!("instance_meta_id" => instance_meta_id));
+                                                        params!("instance_meta_id" => instance_meta.instance_meta_id));
 
-                                break; // only parse one instance meta per loop  so that new logs will still appear
                             }
                         }
                     }
