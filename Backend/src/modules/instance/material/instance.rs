@@ -55,12 +55,12 @@ impl Instance {
         let instance_metas_arc_clone = Arc::clone(&self.instance_metas);
         let instance_exports_arc_clone = Arc::clone(&self.instance_exports);
         let instance_attempts_arc_clone = Arc::clone(&self.instance_attempts);
-        // let instance_rankings_dps_arc_clone = Arc::clone(&self.instance_rankings_dps);
-        // let instance_rankings_hps_arc_clone = Arc::clone(&self.instance_rankings_hps);
-        // let instance_rankings_tps_arc_clone = Arc::clone(&self.instance_rankings_tps);
+        let instance_rankings_dps_arc_clone = Arc::clone(&self.instance_rankings_dps);
+        let instance_rankings_hps_arc_clone = Arc::clone(&self.instance_rankings_hps);
+        let instance_rankings_tps_arc_clone = Arc::clone(&self.instance_rankings_tps);
         let instance_kill_attempts_clone = Arc::clone(&self.instance_kill_attempts);
-        // let speed_runs_arc_clone = Arc::clone(&self.speed_runs);
-        // let speed_kills_arc_clone = Arc::clone(&self.speed_kills);
+        let speed_runs_arc_clone = Arc::clone(&self.speed_runs);
+        let speed_kills_arc_clone = Arc::clone(&self.speed_kills);
 
         let mut startup = true;
 
@@ -83,25 +83,25 @@ impl Instance {
                 update_instance_metas(Arc::clone(&instance_metas_arc_clone), &mut db_main, &armory);
                 update_instance_kill_attempts(Arc::clone(&instance_kill_attempts_clone), &mut db_main);
 
-                // if startup || armory_counter >= 1000 {
-                //     // purge old character info
-                //     println!("Updating rankings at {}", time_util::now());
-                //     update_instance_rankings_dps(Arc::clone(&instance_rankings_dps_arc_clone), &mut db_main, &armory);
-                //     update_instance_rankings_hps(Arc::clone(&instance_rankings_hps_arc_clone), &mut db_main, &armory);
-                //     update_instance_rankings_tps(Arc::clone(&instance_rankings_tps_arc_clone), &mut db_main, &armory);
-                //     println!("Updating rankings complete at {}", time_util::now());
-                //
-                //     println!("Updating speed runs at {}", time_util::now());
-                //     calculate_speed_runs(Arc::clone(&instance_metas_arc_clone),
-                //                          Arc::clone(&instance_kill_attempts_clone),
-                //                          Arc::clone(&speed_runs_arc_clone), &mut db_main, &armory);
-                //     calculate_speed_kills(Arc::clone(&instance_metas_arc_clone),
-                //                           Arc::clone(&instance_kill_attempts_clone),
-                //                           Arc::clone(&speed_kills_arc_clone), &mut db_main, &armory);
-                //     println!("Updating speed runs complete at {}", time_util::now());
-                //     armory_counter = 0;
-                //     startup = false;
-                // }
+                if startup || armory_counter >= 1000 {
+                    // purge old character info
+                    println!("Updating rankings at {}", time_util::now());
+                    update_instance_rankings_dps(Arc::clone(&instance_rankings_dps_arc_clone), &mut db_main, &armory);
+                    update_instance_rankings_hps(Arc::clone(&instance_rankings_hps_arc_clone), &mut db_main, &armory);
+                    update_instance_rankings_tps(Arc::clone(&instance_rankings_tps_arc_clone), &mut db_main, &armory);
+                    println!("Updating rankings complete at {}", time_util::now());
+
+                    println!("Updating speed runs at {}", time_util::now());
+                    calculate_speed_runs(Arc::clone(&instance_metas_arc_clone),
+                                         Arc::clone(&instance_kill_attempts_clone),
+                                         Arc::clone(&speed_runs_arc_clone), &mut db_main, &armory);
+                    calculate_speed_kills(Arc::clone(&instance_metas_arc_clone),
+                                          Arc::clone(&instance_kill_attempts_clone),
+                                          Arc::clone(&speed_kills_arc_clone), &mut db_main, &armory);
+                    println!("Updating speed runs complete at {}", time_util::now());
+                    armory_counter = 0;
+                    startup = false;
+                }
 
                 // update an instance metas that doesn't have updated specs
                 if let Some(instance_meta) = db_main
