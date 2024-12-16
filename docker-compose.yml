@@ -44,6 +44,8 @@ services:
     - rpll
     ports:
     - '1234:80'
+    volumes:
+      - rpll_backend_storage:/etc/nginx/html/Storage
 #  traefik:
 #    image: traefik:latest
 #    command: --api.insecure=true --providers.docker
