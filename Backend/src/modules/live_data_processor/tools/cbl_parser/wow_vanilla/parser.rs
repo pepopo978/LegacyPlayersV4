@@ -117,112 +117,115 @@ pub const DRUID_BALANCE_SPEC: &str = "51|0|0";
 pub const DRUID_FERAL_COMBAT_SPEC: &str = "0|51|0";
 pub const DRUID_RESTORATION_SPEC: &str = "0|0|51";
 
-
-fn assign_spec_from_buff_gain(receiver: Option<&mut Participant>, spell: &str) {
+fn assign_spec_from_aura_gain(receiver: Option<&mut Participant>, spell: &str, timestamp: u64) {
     if receiver.is_none() {
         return;
     }
 
-    if spell == "Arcane Eclipse" || spell == "Nature Eclipse" {
+    if spell == "Scrambled Brain" {
+        // track when brainwasher used for spec changes
         let p = receiver.unwrap();
-        p.talents = Some(DRUID_BALANCE_SPEC.to_string());
+        p.last_brainwash = timestamp;
+    } else if spell == "Arcane Eclipse" || spell == "Nature Eclipse" {
+        let p = receiver.unwrap();
+        p.record_talents(timestamp, DRUID_BALANCE_SPEC);
     } else if spell == "Blood Frenzy" || spell == "Berserk" {
         let p = receiver.unwrap();
-        p.talents = Some(DRUID_FERAL_COMBAT_SPEC.to_string());
+        p.record_talents(timestamp, DRUID_FERAL_COMBAT_SPEC);
     } else if spell == "Tidal Surge" {
         let p = receiver.unwrap();
-        p.talents = Some(SHAMAN_RESTORATION_SPEC.to_string());
+        p.record_talents(timestamp, SHAMAN_RESTORATION_SPEC);
     } else if spell == "Holy Might" {
         let p = receiver.unwrap();
-        p.talents = Some(PALADIN_RETRIBUTION_SPEC.to_string());
+        p.record_talents(timestamp, PALADIN_RETRIBUTION_SPEC);
     } else if spell == "Tree of Life Form" {
         let p = receiver.unwrap();
-        p.talents = Some(DRUID_RESTORATION_SPEC.to_string());
+        p.record_talents(timestamp, DRUID_RESTORATION_SPEC);
     } else if spell == "Arcane Power" {
         let p = receiver.unwrap();
-        p.talents = Some(MAGE_ARCANE_SPEC.to_string());
+        p.record_talents(timestamp, MAGE_ARCANE_SPEC);
     } else if spell == "Combustion" {
         let p = receiver.unwrap();
-        p.talents = Some(MAGE_FIRE_SPEC.to_string());
+        p.record_talents(timestamp, MAGE_FIRE_SPEC);
     } else if spell == "Ice Barrier" {
         let p = receiver.unwrap();
-        p.talents = Some(MAGE_FROST_SPEC.to_string());
+        p.record_talents(timestamp, MAGE_FROST_SPEC);
     } else if spell == "Seal of Command" {
         let p = receiver.unwrap();
-        p.talents = Some(PALADIN_RETRIBUTION_SPEC.to_string());
+        p.record_talents(timestamp, PALADIN_RETRIBUTION_SPEC);
     } else if spell == "Elemental Mastery" {
         let p = receiver.unwrap();
-        p.talents = Some(SHAMAN_ELEMENTAL_SPEC.to_string());
+        p.record_talents(timestamp, SHAMAN_ELEMENTAL_SPEC);
     } else if spell == "Stormstrike" {
         let p = receiver.unwrap();
-        p.talents = Some(SHAMAN_ENHANCEMENT_SPEC.to_string());
+        p.record_talents(timestamp, SHAMAN_ENHANCEMENT_SPEC);
     } else if spell == "Envenom" {
         let p = receiver.unwrap();
-        p.talents = Some(ROGUE_ASSASSINATION_SPEC.to_string());
+        p.record_talents(timestamp, ROGUE_ASSASSINATION_SPEC);
     } else if spell == "Adrenaline Rush" {
         let p = receiver.unwrap();
-        p.talents = Some(ROGUE_COMBAT_SPEC.to_string());
+        p.record_talents(timestamp, ROGUE_COMBAT_SPEC);
     } else if spell == "Preparation" {
         let p = receiver.unwrap();
-        p.talents = Some(ROGUE_SUBTLETY_SPEC.to_string());
+        p.record_talents(timestamp, ROGUE_SUBTLETY_SPEC);
     }
 }
 
-fn assign_spec_from_heal(caster: Option<&mut Participant>, spell: &str) {
+fn assign_spec_from_heal(caster: Option<&mut Participant>, spell: &str, timestamp: u64) {
     if caster.is_none() {
         return;
     }
 
     if spell == "Holy Shock" {
         let p = caster.unwrap();
-        p.talents = Some(PALADIN_HOLY_SPEC.to_string());
+        p.record_talents(timestamp, PALADIN_HOLY_SPEC);
     }
 }
 
-fn assign_spec_from_cast(caster: Option<&mut Participant>, spell: &str) {
+fn assign_spec_from_cast(caster: Option<&mut Participant>, spell: &str, timestamp: u64) {
     if caster.is_none() {
         return;
     }
 
     if spell == "Mortal Strike" || spell == "Sweeping Strikes" {
         let p = caster.unwrap();
-        p.talents = Some(WARRIOR_ARMS_SPEC.to_string());
+        p.record_talents(timestamp, WARRIOR_ARMS_SPEC);
     } else if spell == "Bloodthirst" {
         let p = caster.unwrap();
-        p.talents = Some(WARRIOR_FURY_SPEC.to_string());
+        p.record_talents(timestamp, WARRIOR_FURY_SPEC);
     } else if spell == "Shield Slam" {
         let p = caster.unwrap();
-        p.talents = Some(WARRIOR_PROTECTION_SPEC.to_string());
+        p.record_talents(timestamp, WARRIOR_PROTECTION_SPEC);
     } else if spell == "Bulwark of the Righteous" {
         let p = caster.unwrap();
-        p.talents = Some(PALADIN_PROTECTION_SPEC.to_string());
+        p.record_talents(timestamp, PALADIN_PROTECTION_SPEC);
     } else if spell == "Bestial Wrath" {
         let p = caster.unwrap();
-        p.talents = Some(HUNTER_BEAST_MASTERY_SPEC.to_string());
+        p.record_talents(timestamp, HUNTER_BEAST_MASTERY_SPEC);
     } else if spell == "Piercing Shots" {
         let p = caster.unwrap();
-        p.talents = Some(HUNTER_MARKSMANSHIP_SPEC.to_string());
+        p.record_talents(timestamp, HUNTER_MARKSMANSHIP_SPEC);
     } else if spell == "Carve" {
         let p = caster.unwrap();
-        p.talents = Some(HUNTER_SURVIVAL_SPEC.to_string());
+        p.record_talents(timestamp, HUNTER_SURVIVAL_SPEC);
     } else if spell == "Enlighten" {
         let p = caster.unwrap();
-        p.talents = Some(PRIEST_DISCIPLINE_SPEC.to_string());
+        p.record_talents(timestamp, PRIEST_DISCIPLINE_SPEC);
     } else if spell == "Proclaim Champion" {
         let p = caster.unwrap();
-        p.talents = Some(PRIEST_HOLY_SPEC.to_string());
+        p.record_talents(timestamp, PRIEST_HOLY_SPEC);
     } else if spell == "Vampiric Embrace" {
         let p = caster.unwrap();
-        p.talents = Some(PRIEST_SHADOW_SPEC.to_string());
+        p.record_talents(timestamp, PRIEST_SHADOW_SPEC);
     } else if spell == "Dark Harvest" {
         let p = caster.unwrap();
-        p.talents = Some(WARLOCK_AFFLICTION_SPEC.to_string());
+        p.record_talents(timestamp, WARLOCK_AFFLICTION_SPEC);
     } else if spell == "Power Overwhelming" {
         let p = caster.unwrap();
-        p.talents = Some(WARLOCK_DEMONOLOGY_SPEC.to_string());
+        p.record_talents(timestamp, WARLOCK_DEMONOLOGY_SPEC);
     } else if spell == "Conflagrate" {
         let p = caster.unwrap();
-        p.talents = Some(WARLOCK_DESTRUCTION_SPEC.to_string());
+        p.record_talents(timestamp, WARLOCK_DESTRUCTION_SPEC);
     }
 }
 
@@ -285,7 +288,7 @@ impl CombatLogParser for WoWVanillaParser {
             let caster = parse_unit(&mut self.cache_unit, data, captures.get(1)?.as_str())?;
             let spell_id = parse_spell_args(&mut self.cache_spell_id, data, captures.get(2)?.as_str())?;
 
-            assign_spec_from_cast(self.participants.get_mut(&caster.unit_id), captures.get(2)?.as_str());
+            assign_spec_from_cast(self.participants.get_mut(&caster.unit_id), captures.get(2)?.as_str(), event_ts);
 
             return Some(vec![MessageType::SpellCastAttempt(SpellCast {
                 caster,
@@ -310,7 +313,7 @@ impl CombatLogParser for WoWVanillaParser {
             self.collect_active_map(data, &target, event_ts);
             let effective_heal = self.participants.get_mut(&target.unit_id).unwrap().attribute_heal(amount);
 
-            assign_spec_from_buff_gain(self.participants.get_mut(&caster.unit_id), captures.get(5)?.as_str());
+            assign_spec_from_aura_gain(self.participants.get_mut(&caster.unit_id), captures.get(5)?.as_str(), event_ts);
 
             return Some(vec![
                 MessageType::SpellCast(SpellCast {
@@ -348,7 +351,7 @@ impl CombatLogParser for WoWVanillaParser {
             self.collect_active_map(data, &victim, event_ts);
             self.participants.get_mut(&victim.unit_id).unwrap().attribute_damage(damage);
 
-            assign_spec_from_cast(self.participants.get_mut(&attacker.unit_id), captures.get(2)?.as_str());
+            assign_spec_from_cast(self.participants.get_mut(&attacker.unit_id), captures.get(2)?.as_str(), event_ts);
 
             return Some(vec![
                 MessageType::SpellCast(SpellCast {
@@ -398,7 +401,7 @@ impl CombatLogParser for WoWVanillaParser {
             self.collect_active_map(data, &victim, event_ts);
             self.participants.get_mut(&victim.unit_id).unwrap().attribute_damage(damage);
 
-            assign_spec_from_cast(self.participants.get_mut(&attacker.unit_id), captures.get(2)?.as_str());
+            assign_spec_from_cast(self.participants.get_mut(&attacker.unit_id), captures.get(2)?.as_str(), event_ts);
 
             return Some(vec![
                 MessageType::SpellCast(SpellCast {
@@ -449,7 +452,7 @@ impl CombatLogParser for WoWVanillaParser {
             self.collect_active_map(data, &victim, event_ts);
             self.participants.get_mut(&victim.unit_id).unwrap().attribute_damage(damage);
 
-            assign_spec_from_cast(self.participants.get_mut(&attacker.unit_id), captures.get(5)?.as_str());
+            assign_spec_from_cast(self.participants.get_mut(&attacker.unit_id), captures.get(5)?.as_str(), event_ts);
 
             return Some(vec![
                 MessageType::SpellCast(SpellCast {
@@ -607,7 +610,7 @@ impl CombatLogParser for WoWVanillaParser {
             self.collect_active_map(data, &target, event_ts);
             let effective_heal = self.participants.get_mut(&target.unit_id).unwrap().attribute_heal(amount);
 
-            assign_spec_from_heal(self.participants.get_mut(&caster.unit_id), captures.get(2)?.as_str());
+            assign_spec_from_heal(self.participants.get_mut(&caster.unit_id), captures.get(2)?.as_str(), event_ts);
 
             return Some(vec![
                 MessageType::SpellCast(SpellCast {
@@ -640,7 +643,7 @@ impl CombatLogParser for WoWVanillaParser {
             self.collect_active_map(data, &target, event_ts);
             let effective_heal = self.participants.get_mut(&target.unit_id).unwrap().attribute_heal(amount);
 
-            assign_spec_from_heal(self.participants.get_mut(&caster.unit_id), captures.get(2)?.as_str());
+            assign_spec_from_heal(self.participants.get_mut(&caster.unit_id), captures.get(2)?.as_str(), event_ts);
 
             return Some(vec![
                 MessageType::SpellCast(SpellCast {
@@ -672,7 +675,7 @@ impl CombatLogParser for WoWVanillaParser {
             self.collect_participant(&target, captures.get(1)?.as_str(), event_ts);
             self.collect_active_map(data, &target, event_ts);
 
-            assign_spec_from_buff_gain(self.participants.get_mut(&target.unit_id), captures.get(3)?.as_str());
+            assign_spec_from_aura_gain(self.participants.get_mut(&target.unit_id), captures.get(3)?.as_str(), event_ts);
 
             return Some(vec![MessageType::AuraApplication(AuraApplication {
                 caster,
@@ -750,7 +753,7 @@ impl CombatLogParser for WoWVanillaParser {
             self.collect_active_map(data, &attacker, event_ts);
             self.collect_active_map(data, &victim, event_ts);
 
-            assign_spec_from_cast(self.participants.get_mut(&attacker.unit_id), captures.get(2)?.as_str());
+            assign_spec_from_cast(self.participants.get_mut(&attacker.unit_id), captures.get(2)?.as_str(), event_ts);
 
             return Some(vec![
                 MessageType::SpellCast(SpellCast {
@@ -789,7 +792,7 @@ impl CombatLogParser for WoWVanillaParser {
             self.collect_active_map(data, &attacker, event_ts);
             self.collect_active_map(data, &victim, event_ts);
 
-            assign_spec_from_cast(self.participants.get_mut(&attacker.unit_id), captures.get(2)?.as_str());
+            assign_spec_from_cast(self.participants.get_mut(&attacker.unit_id), captures.get(2)?.as_str(), event_ts);
 
             return Some(vec![
                 MessageType::SpellCast(SpellCast {
@@ -819,7 +822,7 @@ impl CombatLogParser for WoWVanillaParser {
             self.collect_active_map(data, &attacker, event_ts);
             self.collect_active_map(data, &victim, event_ts);
 
-            assign_spec_from_cast(self.participants.get_mut(&attacker.unit_id), captures.get(2)?.as_str());
+            assign_spec_from_cast(self.participants.get_mut(&attacker.unit_id), captures.get(2)?.as_str(), event_ts);
 
             return Some(vec![
                 MessageType::SpellCast(SpellCast {
@@ -849,7 +852,7 @@ impl CombatLogParser for WoWVanillaParser {
             self.collect_active_map(data, &attacker, event_ts);
             self.collect_active_map(data, &victim, event_ts);
 
-            assign_spec_from_cast(self.participants.get_mut(&attacker.unit_id), captures.get(3)?.as_str());
+            assign_spec_from_cast(self.participants.get_mut(&attacker.unit_id), captures.get(3)?.as_str(), event_ts);
 
             return Some(vec![
                 MessageType::SpellCast(SpellCast {
@@ -879,7 +882,7 @@ impl CombatLogParser for WoWVanillaParser {
             self.collect_active_map(data, &attacker, event_ts);
             self.collect_active_map(data, &victim, event_ts);
 
-            assign_spec_from_cast(self.participants.get_mut(&attacker.unit_id), captures.get(2)?.as_str());
+            assign_spec_from_cast(self.participants.get_mut(&attacker.unit_id), captures.get(2)?.as_str(), event_ts);
 
             return Some(vec![
                 MessageType::SpellCast(SpellCast {
@@ -909,7 +912,7 @@ impl CombatLogParser for WoWVanillaParser {
             self.collect_active_map(data, &attacker, event_ts);
             self.collect_active_map(data, &victim, event_ts);
 
-            assign_spec_from_cast(self.participants.get_mut(&attacker.unit_id), captures.get(3)?.as_str());
+            assign_spec_from_cast(self.participants.get_mut(&attacker.unit_id), captures.get(3)?.as_str(), event_ts);
 
             return Some(vec![
                 MessageType::SpellCast(SpellCast {
@@ -939,7 +942,7 @@ impl CombatLogParser for WoWVanillaParser {
             self.collect_active_map(data, &attacker, event_ts);
             self.collect_active_map(data, &victim, event_ts);
 
-            assign_spec_from_cast(self.participants.get_mut(&attacker.unit_id), captures.get(2)?.as_str());
+            assign_spec_from_cast(self.participants.get_mut(&attacker.unit_id), captures.get(2)?.as_str(), event_ts);
 
             return Some(vec![
                 MessageType::SpellCast(SpellCast {
@@ -1064,7 +1067,7 @@ impl CombatLogParser for WoWVanillaParser {
             self.collect_active_map(data, &caster, event_ts);
             self.collect_active_map(data, &target, event_ts);
 
-            assign_spec_from_cast(self.participants.get_mut(&caster.unit_id), captures.get(3)?.as_str());
+            assign_spec_from_cast(self.participants.get_mut(&caster.unit_id), captures.get(3)?.as_str(), event_ts);
 
             return Some(vec![MessageType::SpellCast(SpellCast {
                 caster,
@@ -1083,7 +1086,7 @@ impl CombatLogParser for WoWVanillaParser {
             self.collect_active_map(data, &caster, event_ts);
             self.collect_active_map(data, &target, event_ts);
 
-            assign_spec_from_cast(self.participants.get_mut(&caster.unit_id), captures.get(3)?.as_str());
+            assign_spec_from_cast(self.participants.get_mut(&caster.unit_id), captures.get(3)?.as_str(), event_ts);
 
             return Some(vec![MessageType::SpellCast(SpellCast {
                 caster,
@@ -1099,7 +1102,7 @@ impl CombatLogParser for WoWVanillaParser {
             self.collect_participant(&caster, captures.get(1)?.as_str(), event_ts);
             self.collect_active_map(data, &caster, event_ts);
 
-            assign_spec_from_cast(self.participants.get_mut(&caster.unit_id), captures.get(3)?.as_str());
+            assign_spec_from_cast(self.participants.get_mut(&caster.unit_id), captures.get(3)?.as_str(), event_ts);
 
             return Some(vec![MessageType::SpellCast(SpellCast {
                 caster,
@@ -1279,7 +1282,7 @@ impl CombatLogParser for WoWVanillaParser {
             }
 
             if message_args[28] != "nil" && message_args[28].contains("}") {
-                participant.talents = strip_talent_specialization(&Some(message_args[28].replace("}", "|")));
+                participant.talents.push((event_ts, strip_talent_specialization(&Some(message_args[28].replace("}", "|")))));
             }
 
             return None;
@@ -1442,43 +1445,87 @@ impl CombatLogParser for WoWVanillaParser {
 
     fn get_involved_character_builds(&self) -> Vec<(Option<u32>, u64, CharacterDto)> {
         let mut result = self.participants.iter().filter(|(_, participant)| participant.is_player).fold(Vec::new(), |mut acc, (_, participant)| {
-            let gear_setups = &participant.gear_setups;
-            if gear_setups.is_some() && !gear_setups.as_ref().unwrap().is_empty() {
-                for (ts, gear) in gear_setups.as_ref().unwrap().iter() {
+            let hero_class_id = participant.hero_class_id.unwrap_or(12);
+
+            // don't save player characters with hero class 12 (unknown)
+            if !participant.is_player || hero_class_id != 12 {
+                let mut gear = CharacterGearDto {
+                    head: None,
+                    neck: None,
+                    shoulder: None,
+                    back: None,
+                    chest: None,
+                    shirt: None,
+                    tabard: None,
+                    wrist: None,
+                    main_hand: None,
+                    off_hand: None,
+                    ternary_hand: None,
+                    glove: None,
+                    belt: None,
+                    leg: None,
+                    boot: None,
+                    ring1: None,
+                    ring2: None,
+                    trinket1: None,
+                    trinket2: None,
+                };
+
+                let gear_setups = &participant.gear_setups;
+                if gear_setups.is_some() && !gear_setups.as_ref().unwrap().is_empty() {
+                    // only save the first gear setup
+                    let gear_setup = gear_setups.as_ref().unwrap().first().unwrap().1.clone();
+
+                    gear = CharacterGearDto {
+                        head: create_character_item_dto(&gear_setup[0]),
+                        neck: create_character_item_dto(&gear_setup[1]),
+                        shoulder: create_character_item_dto(&gear_setup[2]),
+                        back: create_character_item_dto(&gear_setup[14]),
+                        chest: create_character_item_dto(&gear_setup[4]),
+                        shirt: create_character_item_dto(&gear_setup[3]),
+                        tabard: create_character_item_dto(&gear_setup[18]),
+                        wrist: create_character_item_dto(&gear_setup[8]),
+                        main_hand: create_character_item_dto(&gear_setup[15]),
+                        off_hand: create_character_item_dto(&gear_setup[16]),
+                        ternary_hand: create_character_item_dto(&gear_setup[17]),
+                        glove: create_character_item_dto(&gear_setup[9]),
+                        belt: create_character_item_dto(&gear_setup[5]),
+                        leg: create_character_item_dto(&gear_setup[6]),
+                        boot: create_character_item_dto(&gear_setup[7]),
+                        ring1: create_character_item_dto(&gear_setup[10]),
+                        ring2: create_character_item_dto(&gear_setup[11]),
+                        trinket1: create_character_item_dto(&gear_setup[12]),
+                        trinket2: create_character_item_dto(&gear_setup[13]),
+                    };
+                }
+
+                let mut talents = participant.talents.clone();
+                if talents.is_empty() {
+                    talents.push((participant.first_seen, None));
+                } else {
+                    // copy the first talent entry with the first seen timestamp
+                    talents.insert(0, (participant.first_seen, talents[0].1.clone()));
+
+                    // copy the last talent entry with the last seen timestamp
+                    talents.push((participant.last_seen, talents.last().unwrap().1.clone()));
+                }
+
+                // loop through talents which is timestamp, talent string
+                for (timestamp, talent) in talents.iter() {
                     acc.push((
                         None,
-                        *ts,
+                        *timestamp,
                         CharacterDto {
                             server_uid: participant.id,
                             character_history: Some(CharacterHistoryDto {
                                 character_info: CharacterInfoDto {
-                                    gear: CharacterGearDto {
-                                        head: create_character_item_dto(&gear[0]),
-                                        neck: create_character_item_dto(&gear[1]),
-                                        shoulder: create_character_item_dto(&gear[2]),
-                                        back: create_character_item_dto(&gear[14]),
-                                        chest: create_character_item_dto(&gear[4]),
-                                        shirt: create_character_item_dto(&gear[3]),
-                                        tabard: create_character_item_dto(&gear[18]),
-                                        wrist: create_character_item_dto(&gear[8]),
-                                        main_hand: create_character_item_dto(&gear[15]),
-                                        off_hand: create_character_item_dto(&gear[16]),
-                                        ternary_hand: create_character_item_dto(&gear[17]),
-                                        glove: create_character_item_dto(&gear[9]),
-                                        belt: create_character_item_dto(&gear[5]),
-                                        leg: create_character_item_dto(&gear[6]),
-                                        boot: create_character_item_dto(&gear[7]),
-                                        ring1: create_character_item_dto(&gear[10]),
-                                        ring2: create_character_item_dto(&gear[11]),
-                                        trinket1: create_character_item_dto(&gear[12]),
-                                        trinket2: create_character_item_dto(&gear[13]),
-                                    },
+                                    gear: gear.clone(),
                                     hero_class_id: participant.hero_class_id.unwrap_or(12),
                                     level: 60,
                                     gender: participant.gender_id.unwrap_or(false),
                                     profession1: None,
                                     profession2: None,
-                                    talent_specialization: participant.talents.clone(),
+                                    talent_specialization: talent.clone(),
                                     race_id: participant.race_id.unwrap_or(1),
                                 },
                                 character_name: participant.name.clone(),
@@ -1497,62 +1544,7 @@ impl CombatLogParser for WoWVanillaParser {
                             }),
                         },
                     ));
-                    // only save the first gear setup
-                    break;
                 }
-            } else {
-                acc.push((
-                    None,
-                    participant.last_seen,
-                    CharacterDto {
-                        server_uid: participant.id,
-                        character_history: Some(CharacterHistoryDto {
-                            character_info: CharacterInfoDto {
-                                gear: CharacterGearDto {
-                                    head: None,
-                                    neck: None,
-                                    shoulder: None,
-                                    back: None,
-                                    chest: None,
-                                    shirt: None,
-                                    tabard: None,
-                                    wrist: None,
-                                    main_hand: None,
-                                    off_hand: None,
-                                    ternary_hand: None,
-                                    glove: None,
-                                    belt: None,
-                                    leg: None,
-                                    boot: None,
-                                    ring1: None,
-                                    ring2: None,
-                                    trinket1: None,
-                                    trinket2: None,
-                                },
-                                hero_class_id: participant.hero_class_id.unwrap_or(12),
-                                level: 60,
-                                gender: participant.gender_id.unwrap_or(false),
-                                profession1: None,
-                                profession2: None,
-                                talent_specialization: participant.talents.clone(),
-                                race_id: participant.race_id.unwrap_or(1),
-                            },
-                            character_name: participant.name.clone(),
-                            character_guild: participant.guild_args.as_ref().map(|(guild_name, rank_name, rank_index)| CharacterGuildDto {
-                                guild: GuildDto {
-                                    server_uid: get_hashed_player_unit_id(guild_name),
-                                    name: guild_name.clone(),
-                                },
-                                rank: GuildRank { index: *rank_index, name: rank_name.clone() },
-                            }),
-                            character_title: None,
-                            profession_skill_points1: None,
-                            profession_skill_points2: None,
-                            facial: None,
-                            arena_teams: vec![],
-                        }),
-                    },
-                ));
             }
             acc
         });

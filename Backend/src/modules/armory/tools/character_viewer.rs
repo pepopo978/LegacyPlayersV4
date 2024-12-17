@@ -92,7 +92,13 @@ impl CharacterViewer for Armory {
             let hero_class = data.get_hero_class(character_history.character_info.hero_class_id).unwrap();
             let breakdown = description.split('|').map(|spec| spec.chars().map(|talent| talent.to_digit(10).unwrap()).sum::<u32>()).collect::<Vec<u32>>();
             let breakdown_max = breakdown.iter().max().unwrap();
-            let breakdown_index = breakdown.iter().position(|value| *value == *breakdown_max).unwrap();
+            let mut breakdown_index = breakdown.iter().position(|value| *value == *breakdown_max).unwrap();
+
+            // handle bad talent index
+            if breakdown_index >= hero_class.talents.len() as usize {
+                breakdown_index = 0;
+            }
+
             CharacterViewerTalentsDto {
                 icon: data.get_icon(hero_class.talents[breakdown_index].icon).unwrap().name,
                 name: data.get_localization(language_id, hero_class.talents[breakdown_index].localization_id).unwrap().content,

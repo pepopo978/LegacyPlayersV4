@@ -154,6 +154,15 @@ impl Instance {
                                 let content = content.join("\n");
 
                                 println!("Updating specs for instance meta {}", instance_meta.instance_meta_id);
+
+                                // delete all character histories within the start/end timestamp
+                                db_main.execute_wparams("DELETE FROM armory_character_history WHERE timestamp >= :start_ts AND timestamp <= :end_ts and character_id in (SELECT character_id FROM instance_participant WHERE instance_meta_id = :instance_meta_id)",
+                                                        params!(
+                                                            "start_ts" => instance_meta.start_ts/1000,
+                                                            "end_ts" => instance_meta.end_ts.unwrap_or(instance_meta.start_ts)/1000,
+                                                            "instance_meta_id" => instance_meta.instance_meta_id
+                                                        ));
+
                                 let mut combat_log_parser = crate::modules::live_data_processor::material::WoWVanillaParser::new(instance_meta.server_id);
 
                                 parse_cbl(&mut combat_log_parser,

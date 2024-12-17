@@ -11,14 +11,17 @@ pub struct Participant {
     pub gender_id: Option<bool>,
     pub race_id: Option<u8>,
     pub guild_args: Option<(String, String, u8)>,
-    pub talents: Option<String>,
+    pub talents: Vec<(u64, Option<String>)>,
+    pub last_seen_talents: String,
     pub server: Option<(u32, String)>,
     pub gear_setups: Option<Vec<(u64, Vec<Option<(u32, Option<u32>, Option<Vec<Option<u32>>>)>>)>>,
     pub active_intervals: Vec<(u64, u64)>,
     available_effective_heal: u32,
 
     // Technical
+    pub first_seen: u64,
     pub last_seen: u64,
+    pub last_brainwash: u64,
 }
 
 impl Participant {
@@ -33,12 +36,33 @@ impl Participant {
             server: None,
             gear_setups: None,
             active_intervals: vec![(last_seen, last_seen)],
+            first_seen: last_seen,
             last_seen,
             guild_args: None,
             available_effective_heal: 0,
-            talents: None,
+            talents: Vec::new(),
+            last_seen_talents: String::new(),
+            last_brainwash: 0,
         }
     }
+
+    pub fn record_talents(&mut self, timestamp: u64, talent_string: &str) {
+        if self.last_seen_talents != talent_string {
+            if self.last_brainwash > 0 {
+                // add an entry right 1s before brainwash with previous talents
+                // don't bother marking talents if the last seen talents were empty
+                if self.last_seen_talents != "" {
+                    self.talents.push((self.last_brainwash - 1000, Some(self.last_seen_talents.clone())));
+                }
+                self.talents.push((self.last_brainwash, Some(talent_string.to_string())));
+                self.last_brainwash = 0; // reset brainwash
+            } else {
+                self.talents.push((timestamp, Some(talent_string.to_string())));
+            }
+            self.last_seen_talents = talent_string.to_string();
+        }
+    }
+
 
     // Assumes that now > last_seen
     pub fn add_participation_point(&mut self, now: u64) {

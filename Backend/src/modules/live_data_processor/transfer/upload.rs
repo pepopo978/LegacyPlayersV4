@@ -9,10 +9,9 @@ use crate::MainDb;
 use crate::modules::account::guard::Authenticate;
 use crate::modules::armory::Armory;
 use crate::modules::data::Data as DataMaterial;
-use crate::modules::data::tools::RetrieveServer;
 use crate::modules::live_data_processor::dto::LiveDataProcessorFailure;
 use crate::modules::live_data_processor::LiveDataProcessor;
-use crate::modules::live_data_processor::material::{WoWRetailClassicParser, WoWTBCParser, WoWVanillaParser, WoWWOTLKParser};
+use crate::modules::live_data_processor::material::{WoWVanillaParser};
 use crate::modules::live_data_processor::tools::cbl_parser::CombatLogParser;
 use crate::modules::live_data_processor::tools::log_parser::parse_cbl;
 use crate::modules::live_data_processor::tools::ProcessMessages;
@@ -89,64 +88,18 @@ pub fn upload_log(mut db_main: MainDb, auth: Authenticate, me: State<LiveDataPro
     }
     let content = content.join("\n");
 
-    if server_id == -1 {
-        return parse(
-            &me,
-            WoWRetailClassicParser::new(),
-            &mut *db_main,
-            &data,
-            &armory,
-            &content,
-            start_time_in_ms,
-            end_time_in_ms,
-            auth.0,
-            upload_id
-        );
-    } else {
-        let server = data.get_server(server_id as u32).unwrap();
-        if server.expansion_id == 1 {
-            return parse(
-                &me,
-                WoWVanillaParser::new(server_id as u32),
-                &mut *db_main,
-                &data,
-                &armory,
-                &content,
-                start_time_in_ms,
-                end_time_in_ms,
-                auth.0,
-                upload_id
-            );
-        } else if server.expansion_id == 2 {
-            return parse(
-                &me,
-                WoWTBCParser::new(server_id as u32),
-                &mut *db_main,
-                &data,
-                &armory,
-                &content,
-                start_time_in_ms,
-                end_time_in_ms,
-                auth.0,
-                upload_id
-            );
-        } else if server.expansion_id == 3 {
-            return parse(
-                &me,
-                WoWWOTLKParser::new(server_id as u32),
-                &mut *db_main,
-                &data,
-                &armory,
-                &content,
-                start_time_in_ms,
-                end_time_in_ms,
-                auth.0,
-                upload_id
-            );
-        }
-    }
-
-    Err(LiveDataProcessorFailure::InvalidInput)
+    return parse(
+        &me,
+        WoWVanillaParser::new(server_id as u32),
+        &mut *db_main,
+        &data,
+        &armory,
+        &content,
+        start_time_in_ms,
+        end_time_in_ms,
+        auth.0,
+        upload_id,
+    );
 }
 
 #[openapi]
