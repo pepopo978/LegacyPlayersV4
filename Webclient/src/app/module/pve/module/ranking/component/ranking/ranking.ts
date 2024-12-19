@@ -279,7 +279,15 @@ export class RankingComponent implements OnInit, OnDestroy {
     }
 
     bar_clicked(bar: [number, number]): void {
-        //this.routerService.navigate(["/viewer/" + this.bar_meta_information.get(bar[0])[0][0].toString() + "/base"]);
+        const url = "/viewer/" + this.bar_meta_information.get(bar[0])[0][0].toString() + "/base";
+        const queryParams = new URLSearchParams();
+
+        const attempt_id = this.bar_meta_information.get(bar[0])[1][0];
+        queryParams.set('preselected_attempt_id', attempt_id.toString());
+
+        const fullUrl = `${url}?${queryParams.toString()}`;
+
+        window.open(fullUrl, '_blank');
     }
 
     select(): void {
