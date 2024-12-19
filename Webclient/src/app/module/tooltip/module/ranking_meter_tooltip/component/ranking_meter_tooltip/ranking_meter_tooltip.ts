@@ -28,7 +28,13 @@ export class RankingMeterTooltipComponent {
     }
 
     navigate_to_viewer(row: [string, number, number, number, number, number]): void {
-        this.router.navigate(["/viewer/" + row[4].toString() + "/base"], {queryParams: {preselected_attempt_id: row[5]}});
+        const url = "/viewer/" + row[4].toString() + "/base";
+        const queryParams = new URLSearchParams();
+        queryParams.set('preselected_attempt_id', row[5].toString());
+
+        const fullUrl = `${url}?${queryParams.toString()}`;
+
+        window.open(fullUrl, '_blank');
     }
 
     get results(): Array<[string, number, number, number, number, number]> {

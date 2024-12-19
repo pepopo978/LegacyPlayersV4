@@ -279,15 +279,19 @@ export class RankingComponent implements OnInit, OnDestroy {
     }
 
     bar_clicked(bar: [number, number]): void {
-        const url = "/viewer/" + this.bar_meta_information.get(bar[0])[0][0].toString() + "/base";
-        const queryParams = new URLSearchParams();
+        const bar_data = this.bar_meta_information.get(bar[0]);
+        const bar_raids = bar_data[0];
+        const bar_attempts = bar_data[1];
 
-        const attempt_id = this.bar_meta_information.get(bar[0])[1][0];
-        queryParams.set('preselected_attempt_id', attempt_id.toString());
+        if (bar_raids.length == 1 && bar_attempts.length == 1) {
+            const url = "/viewer/" + bar_raids[0].toString() + "/base";
 
-        const fullUrl = `${url}?${queryParams.toString()}`;
-
-        window.open(fullUrl, '_blank');
+            const queryParams = new URLSearchParams();
+            const attempt_id = bar_attempts[0];
+            queryParams.set('preselected_attempt_id', attempt_id.toString());
+            const fullUrl = `${url}?${queryParams.toString()}`;
+            window.open(fullUrl, '_blank');
+        }
     }
 
     select(): void {
