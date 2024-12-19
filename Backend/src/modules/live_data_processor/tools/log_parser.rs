@@ -57,57 +57,57 @@ pub fn parse_cbl(parser: &mut impl CombatLogParser,
                 event_timestamp = last_year.timestamp_millis() as u64;
             } else {
                 event_timestamp = timestamp.timestamp_millis() as u64;
-                /*
+            }
+            /*
                 if event_timestamp < start_parse || event_timestamp > end_parse {
                     continue;
                 }
                  */
 
-                if let Some(message_types) = parser.parse_cbl_line(data, event_timestamp, meta[1].trim_end_matches('\r')) {
-                    let mut message_count = (messages.len() + message_types.len()) as u64;
-                    let mut msg_type_len = message_types.len() as u64;
-                    for message_type in message_types {
-                        // if combat started, we can start adding messages
-                        if !combat_started_once {
-                            match &message_type {
-                                MessageType::MeleeDamage(dmg) | MessageType::SpellDamage(dmg) => {
-                                    let mut ignore = dmg.victim.unit_id == 0 || dmg.attacker.unit_id == 0 || dmg.victim.unit_id == dmg.attacker.unit_id;
+            if let Some(message_types) = parser.parse_cbl_line(data, event_timestamp, meta[1].trim_end_matches('\r')) {
+                let mut message_count = (messages.len() + message_types.len()) as u64;
+                let mut msg_type_len = message_types.len() as u64;
+                for message_type in message_types {
+                    // if combat started, we can start adding messages
+                    if !combat_started_once {
+                        match &message_type {
+                            MessageType::MeleeDamage(dmg) | MessageType::SpellDamage(dmg) => {
+                                let mut ignore = dmg.victim.unit_id == 0 || dmg.attacker.unit_id == 0 || dmg.victim.unit_id == dmg.attacker.unit_id;
 
-                                    if !ignore {
-                                        if let Some(spell_name) = dmg.spell_name.as_ref() {
-                                            ignore = combat_ignore_spells.contains(&spell_name.as_str());
-                                        }
-                                    }
-
-                                    if !ignore {
-                                        combat_started_once = true;
+                                if !ignore {
+                                    if let Some(spell_name) = dmg.spell_name.as_ref() {
+                                        ignore = combat_ignore_spells.contains(&spell_name.as_str());
                                     }
                                 }
-                                _ => {}
-                            }
-                        } else {
-                            let mut ts_offset = 0;
-                            if let MessageType::Summon(summon) = &message_type {
-                                if let Some(entry) = summon.unit.unit_id.get_entry() {
-                                    match entry {
-                                        // Order for Shaman Totems
-                                        15439 | 15430 => ts_offset = 50,
-                                        _ => {}
-                                    };
+
+                                if !ignore {
+                                    combat_started_once = true;
                                 }
                             }
-
-                            message_count -= 1;
-                            msg_type_len -= 1;
-
-                            messages.push(Message {
-                                api_version: 0,
-                                message_length: 0,
-                                timestamp: event_timestamp - msg_type_len - ts_offset,
-                                message_count,
-                                message_type,
-                            });
+                            _ => {}
                         }
+                    } else {
+                        let mut ts_offset = 0;
+                        if let MessageType::Summon(summon) = &message_type {
+                            if let Some(entry) = summon.unit.unit_id.get_entry() {
+                                match entry {
+                                    // Order for Shaman Totems
+                                    15439 | 15430 => ts_offset = 50,
+                                    _ => {}
+                                };
+                            }
+                        }
+
+                        message_count -= 1;
+                        msg_type_len -= 1;
+
+                        messages.push(Message {
+                            api_version: 0,
+                            message_length: 0,
+                            timestamp: event_timestamp - msg_type_len - ts_offset,
+                            message_count,
+                            message_type,
+                        });
                     }
                 }
             }
