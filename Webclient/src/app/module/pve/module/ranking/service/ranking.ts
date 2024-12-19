@@ -152,7 +152,17 @@ export class RankingService {
                 for (const [encounter_id, char_results] of result) {
                     if (container.has(encounter_id)) {
                         const encounter_map = container.get(encounter_id);
-                        for (const [character_id, meta, rr] of char_results) {
+                        for (const [character_id, meta, tiny_rr] of char_results) {
+                            const rr = tiny_rr.map(({a, b, c, d, e, f, g}) => ({
+                                instance_meta_id: a,
+                                attempt_id: b,
+                                amount: c,
+                                duration: d,
+                                difficulty_id: e,
+                                character_spec: f,
+                                season_index: g
+                            }));
+
                             if (encounter_map.has(character_id)) {
                                 const char_map = encounter_map.get(character_id);
                                 char_map[1].push(...rr);
@@ -161,7 +171,23 @@ export class RankingService {
                             }
                         }
                     } else {
-                        container.set(encounter_id, new Map(char_results.map(([id, meta, rr]) => [id, [meta, rr]])));
+                        container.set(
+                            encounter_id,
+                            new Map(
+                                char_results.map(([id, meta, tiny_rr]) => [
+                                    id,
+                                    [meta, tiny_rr.map(({a, b, c, d, e, f, g}) => ({
+                                        instance_meta_id: a,
+                                        attempt_id: b,
+                                        amount: c,
+                                        duration: d,
+                                        difficulty_id: e,
+                                        character_spec: f,
+                                        season_index: g,
+                                    }))],
+                                ])
+                            )
+                        );
                     }
                 }
                 observable.next(this.flatten_map(container));
