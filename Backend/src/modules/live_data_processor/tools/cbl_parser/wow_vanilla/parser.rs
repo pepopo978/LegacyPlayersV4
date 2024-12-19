@@ -1326,7 +1326,7 @@ impl CombatLogParser for WoWVanillaParser {
                     }
                     let item_id = u32::from_str_radix(item_args[0], 10).ok()?;
                     let enchant_id = u32::from_str_radix(item_args[1], 10).ok()?;
-                    if item_id == 0 || item_id > 25818{
+                    if item_id == 0 || item_id > 25818 {
                         gear.push(None);
                     } else if enchant_id == 0 || enchant_id > 3000 {
                         gear.push(Some((item_id, None, None)));
