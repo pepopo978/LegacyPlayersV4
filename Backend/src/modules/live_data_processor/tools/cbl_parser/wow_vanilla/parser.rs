@@ -286,9 +286,11 @@ impl CombatLogParser for WoWVanillaParser {
 
         if let Some(captures) = RE_SPELL_CAST_ATTEMPT.captures(&content) {
             let caster = parse_unit(&mut self.cache_unit, data, captures.get(1)?.as_str())?;
-            let spell_id = parse_spell_args(&mut self.cache_spell_id, data, captures.get(2)?.as_str())?;
 
-            assign_spec_from_cast(self.participants.get_mut(&caster.unit_id), captures.get(2)?.as_str(), event_ts);
+            let spell_name = captures.get(2)?.as_str();
+            let spell_id = parse_spell_args(&mut self.cache_spell_id, data, spell_name)?;
+
+            assign_spec_from_cast(self.participants.get_mut(&caster.unit_id), spell_name, event_ts);
 
             return Some(vec![MessageType::SpellCastAttempt(SpellCast {
                 caster,
@@ -339,7 +341,8 @@ impl CombatLogParser for WoWVanillaParser {
          */
         if let Some(captures) = RE_DAMAGE_SPELL_HIT_OR_CRIT.captures(&content) {
             let attacker = parse_unit(&mut self.cache_unit, data, captures.get(1)?.as_str())?;
-            let spell_id = parse_spell_args(&mut self.cache_spell_id, data, captures.get(2)?.as_str())?;
+            let spell_name = captures.get(2)?.as_str();
+            let spell_id = parse_spell_args(&mut self.cache_spell_id, data, spell_name)?;
             let mut hit_mask = if captures.get(3)?.as_str() == "cr" { HitType::Crit as u32 } else { HitType::Hit as u32 };
             let victim = parse_unit(&mut self.cache_unit, data, captures.get(4)?.as_str())?;
             let damage = u32::from_str_radix(captures.get(5)?.as_str(), 10).ok()?;
@@ -351,7 +354,7 @@ impl CombatLogParser for WoWVanillaParser {
             self.collect_active_map(data, &victim, event_ts);
             self.participants.get_mut(&victim.unit_id).unwrap().attribute_damage(damage);
 
-            assign_spec_from_cast(self.participants.get_mut(&attacker.unit_id), captures.get(2)?.as_str(), event_ts);
+            assign_spec_from_cast(self.participants.get_mut(&attacker.unit_id), spell_name, event_ts);
 
             return Some(vec![
                 MessageType::SpellCast(SpellCast {
@@ -364,6 +367,7 @@ impl CombatLogParser for WoWVanillaParser {
                     attacker,
                     victim,
                     spell_id: Some(spell_id),
+                    spell_name: Some(spell_name.to_string()),
                     hit_mask,
                     blocked: trailer.iter().find(|(_, hit_type)| *hit_type == HitType::PartialBlock).map(|(amount, _)| amount.unwrap()).unwrap_or(0),
                     damage_over_time: false,
@@ -379,7 +383,8 @@ impl CombatLogParser for WoWVanillaParser {
 
         if let Some(captures) = RE_DAMAGE_SPELL_HIT_OR_CRIT_SCHOOL.captures(&content) {
             let attacker = parse_unit(&mut self.cache_unit, data, captures.get(1)?.as_str())?;
-            let spell_id = parse_spell_args(&mut self.cache_spell_id, data, captures.get(2)?.as_str())?;
+            let spell_name = captures.get(2)?.as_str();
+            let spell_id = parse_spell_args(&mut self.cache_spell_id, data, spell_name)?;
             let mut hit_mask = if captures.get(3)?.as_str() == "cr" { HitType::Crit as u32 } else { HitType::Hit as u32 };
             let victim = parse_unit(&mut self.cache_unit, data, captures.get(4)?.as_str())?;
             let damage = u32::from_str_radix(captures.get(5)?.as_str(), 10).ok()?;
@@ -401,7 +406,7 @@ impl CombatLogParser for WoWVanillaParser {
             self.collect_active_map(data, &victim, event_ts);
             self.participants.get_mut(&victim.unit_id).unwrap().attribute_damage(damage);
 
-            assign_spec_from_cast(self.participants.get_mut(&attacker.unit_id), captures.get(2)?.as_str(), event_ts);
+            assign_spec_from_cast(self.participants.get_mut(&attacker.unit_id), spell_name, event_ts);
 
             return Some(vec![
                 MessageType::SpellCast(SpellCast {
@@ -414,6 +419,7 @@ impl CombatLogParser for WoWVanillaParser {
                     attacker,
                     victim,
                     spell_id: Some(spell_id),
+                    spell_name: Some(spell_name.to_string()),
                     hit_mask,
                     blocked: trailer.iter().find(|(_, hit_type)| *hit_type == HitType::PartialBlock).map(|(amount, _)| amount.unwrap()).unwrap_or(0),
                     damage_over_time: false,
@@ -441,7 +447,9 @@ impl CombatLogParser for WoWVanillaParser {
                 _ => unreachable!(),
             };
             let attacker = parse_unit(&mut self.cache_unit, data, captures.get(4)?.as_str())?;
-            let spell_id = parse_spell_args(&mut self.cache_spell_id, data, captures.get(5)?.as_str())?;
+
+            let spell_name = captures.get(5)?.as_str();
+            let spell_id = parse_spell_args(&mut self.cache_spell_id, data, spell_name)?;
 
             let mut hit_mask = HitType::Hit as u32;
             let trailer = parse_trailer(captures.get(6)?.as_str());
@@ -452,7 +460,7 @@ impl CombatLogParser for WoWVanillaParser {
             self.collect_active_map(data, &victim, event_ts);
             self.participants.get_mut(&victim.unit_id).unwrap().attribute_damage(damage);
 
-            assign_spec_from_cast(self.participants.get_mut(&attacker.unit_id), captures.get(5)?.as_str(), event_ts);
+            assign_spec_from_cast(self.participants.get_mut(&attacker.unit_id), spell_name, event_ts);
 
             return Some(vec![
                 MessageType::SpellCast(SpellCast {
@@ -465,6 +473,7 @@ impl CombatLogParser for WoWVanillaParser {
                     attacker,
                     victim,
                     spell_id: Some(spell_id),
+                    spell_name: Some(spell_name.to_string()),
                     hit_mask,
                     blocked: trailer.iter().find(|(_, hit_type)| *hit_type == HitType::PartialBlock).map(|(amount, _)| amount.unwrap()).unwrap_or(0),
                     damage_over_time: false,
@@ -510,6 +519,7 @@ impl CombatLogParser for WoWVanillaParser {
                     attacker,
                     victim,
                     spell_id: Some(spell_id),
+                    spell_name: None,
                     hit_mask: HitType::Hit as u32,
                     blocked: 0,
                     damage_over_time: false,
@@ -543,6 +553,7 @@ impl CombatLogParser for WoWVanillaParser {
                 attacker,
                 victim,
                 spell_id: None,
+                spell_name: None,
                 hit_mask,
                 blocked: trailer.iter().find(|(_, hit_type)| *hit_type == HitType::PartialBlock).map(|(amount, _)| amount.unwrap()).unwrap_or(0),
                 damage_over_time: false,
@@ -582,6 +593,7 @@ impl CombatLogParser for WoWVanillaParser {
                 attacker,
                 victim,
                 spell_id: None,
+                spell_name: None,
                 hit_mask,
                 blocked: trailer.iter().find(|(_, hit_type)| *hit_type == HitType::PartialBlock).map(|(amount, _)| amount.unwrap()).unwrap_or(0),
                 damage_over_time: false,
@@ -669,21 +681,45 @@ impl CombatLogParser for WoWVanillaParser {
          */
         if let Some(captures) = RE_AURA_GAIN_HARMFUL_HELPFUL.captures(&content) {
             let target = parse_unit(&mut self.cache_unit, data, captures.get(1)?.as_str())?;
-            let spell_id = parse_spell_args(&mut self.cache_spell_id, data, captures.get(3)?.as_str())?;
+            let helpful_harmful = captures.get(2)?.as_str();
+            let spell_name = captures.get(3)?.as_str();
+            let spell_id = parse_spell_args(&mut self.cache_spell_id, data, spell_name)?;
             let stack_amount = u8::from_str_radix(captures.get(4)?.as_str(), 10).ok()?;
             let caster = Unit { is_player: true, unit_id: 0 };
             self.collect_participant(&target, captures.get(1)?.as_str(), event_ts);
             self.collect_active_map(data, &target, event_ts);
 
-            assign_spec_from_aura_gain(self.participants.get_mut(&target.unit_id), captures.get(3)?.as_str(), event_ts);
+            assign_spec_from_aura_gain(self.participants.get_mut(&target.unit_id), spell_name, event_ts);
 
-            return Some(vec![MessageType::AuraApplication(AuraApplication {
-                caster,
-                target,
-                spell_id,
-                stack_amount: stack_amount as u32,
-                delta: stack_amount as i8,
-            })]);
+            return if helpful_harmful == "gains" {
+                Some(vec![MessageType::AuraApplication(AuraApplication {
+                    caster,
+                    target,
+                    spell_id,
+                    stack_amount: stack_amount as u32,
+                    delta: stack_amount as i8,
+                })])
+            } else {
+                Some(vec![
+                    MessageType::AuraApplication(AuraApplication {
+                        caster,
+                        target,
+                        spell_id,
+                        stack_amount: stack_amount as u32,
+                        delta: stack_amount as i8,
+                    }),
+                    MessageType::SpellDamage(DamageDone {
+                        attacker: Unit { is_player: true, unit_id: 0 },
+                        victim: Unit { is_player: true, unit_id: 0 },
+                        spell_id: Some(spell_id),
+                        spell_name: Some(spell_name.to_string()),
+                        hit_mask: HitType::Miss as u32,
+                        blocked: 0,
+                        damage_over_time: false,
+                        damage_components: vec![],
+                    }),
+                ])
+            }
         }
 
         if let Some(captures) = RE_AURA_FADE.captures(&content) {
@@ -707,7 +743,8 @@ impl CombatLogParser for WoWVanillaParser {
          */
         if let Some(captures) = RE_DAMAGE_SPELL_SPLIT.captures(&content) {
             let attacker = parse_unit(&mut self.cache_unit, data, captures.get(1)?.as_str())?;
-            let spell_id = parse_spell_args(&mut self.cache_spell_id, data, captures.get(2)?.as_str())?;
+            let spell_name = captures.get(2)?.as_str();
+            let spell_id = parse_spell_args(&mut self.cache_spell_id, data, spell_name)?;
             let victim = parse_unit(&mut self.cache_unit, data, captures.get(3)?.as_str())?;
             let damage = u32::from_str_radix(captures.get(4)?.as_str(), 10).ok()?;
 
@@ -731,6 +768,7 @@ impl CombatLogParser for WoWVanillaParser {
                     attacker,
                     victim,
                     spell_id: Some(spell_id),
+                    spell_name: Some(spell_name.to_string()),
                     hit_mask,
                     blocked: trailer.iter().find(|(_, hit_type)| *hit_type == HitType::PartialBlock).map(|(amount, _)| amount.unwrap()).unwrap_or(0),
                     damage_over_time: false,
@@ -746,14 +784,15 @@ impl CombatLogParser for WoWVanillaParser {
 
         if let Some(captures) = RE_DAMAGE_SPELL_MISS.captures(&content) {
             let attacker = parse_unit(&mut self.cache_unit, data, captures.get(1)?.as_str())?;
-            let spell_id = parse_spell_args(&mut self.cache_spell_id, data, captures.get(2)?.as_str())?;
+            let spell_name = captures.get(2)?.as_str();
+            let spell_id = parse_spell_args(&mut self.cache_spell_id, data, spell_name)?;
             let victim = parse_unit(&mut self.cache_unit, data, captures.get(4)?.as_str())?;
             self.collect_participant(&attacker, captures.get(1)?.as_str(), event_ts);
             self.collect_participant(&victim, captures.get(4)?.as_str(), event_ts);
             self.collect_active_map(data, &attacker, event_ts);
             self.collect_active_map(data, &victim, event_ts);
 
-            assign_spec_from_cast(self.participants.get_mut(&attacker.unit_id), captures.get(2)?.as_str(), event_ts);
+            assign_spec_from_cast(self.participants.get_mut(&attacker.unit_id), spell_name, event_ts);
 
             return Some(vec![
                 MessageType::SpellCast(SpellCast {
@@ -766,6 +805,7 @@ impl CombatLogParser for WoWVanillaParser {
                     attacker,
                     victim,
                     spell_id: Some(spell_id),
+                    spell_name: Some(spell_name.to_string()),
                     hit_mask: HitType::Miss as u32,
                     blocked: 0,
                     damage_over_time: false,
@@ -776,7 +816,8 @@ impl CombatLogParser for WoWVanillaParser {
 
         if let Some(captures) = RE_DAMAGE_SPELL_BLOCK_PARRY_EVADE_DODGE_RESIST_DEFLECT.captures(&content) {
             let attacker = parse_unit(&mut self.cache_unit, data, captures.get(1)?.as_str())?;
-            let spell_id = parse_spell_args(&mut self.cache_spell_id, data, captures.get(2)?.as_str())?;
+            let spell_name = captures.get(2)?.as_str();
+            let spell_id = parse_spell_args(&mut self.cache_spell_id, data, spell_name)?;
             let hit_type = match captures.get(3)?.as_str() {
                 "blocked" => HitType::FullBlock,
                 "parried" => HitType::Parry,
@@ -792,7 +833,7 @@ impl CombatLogParser for WoWVanillaParser {
             self.collect_active_map(data, &attacker, event_ts);
             self.collect_active_map(data, &victim, event_ts);
 
-            assign_spec_from_cast(self.participants.get_mut(&attacker.unit_id), captures.get(2)?.as_str(), event_ts);
+            assign_spec_from_cast(self.participants.get_mut(&attacker.unit_id), spell_name, event_ts);
 
             return Some(vec![
                 MessageType::SpellCast(SpellCast {
@@ -805,6 +846,7 @@ impl CombatLogParser for WoWVanillaParser {
                     attacker,
                     victim,
                     spell_id: Some(spell_id),
+                    spell_name: Some(spell_name.to_string()),
                     hit_mask: hit_type as u32,
                     blocked: 0,
                     damage_over_time: false,
@@ -815,14 +857,15 @@ impl CombatLogParser for WoWVanillaParser {
 
         if let Some(captures) = RE_DAMAGE_SPELL_ABSORB.captures(&content) {
             let attacker = parse_unit(&mut self.cache_unit, data, captures.get(1)?.as_str())?;
-            let spell_id = parse_spell_args(&mut self.cache_spell_id, data, captures.get(2)?.as_str())?;
+            let spell_name = captures.get(2)?.as_str();
+            let spell_id = parse_spell_args(&mut self.cache_spell_id, data, spell_name)?;
             let victim = parse_unit(&mut self.cache_unit, data, captures.get(3)?.as_str())?;
             self.collect_participant(&attacker, captures.get(1)?.as_str(), event_ts);
             self.collect_participant(&victim, captures.get(3)?.as_str(), event_ts);
             self.collect_active_map(data, &attacker, event_ts);
             self.collect_active_map(data, &victim, event_ts);
 
-            assign_spec_from_cast(self.participants.get_mut(&attacker.unit_id), captures.get(2)?.as_str(), event_ts);
+            assign_spec_from_cast(self.participants.get_mut(&attacker.unit_id), spell_name, event_ts);
 
             return Some(vec![
                 MessageType::SpellCast(SpellCast {
@@ -835,6 +878,7 @@ impl CombatLogParser for WoWVanillaParser {
                     attacker,
                     victim,
                     spell_id: Some(spell_id),
+                    spell_name: Some(spell_name.to_string()),
                     hit_mask: HitType::FullAbsorb as u32,
                     blocked: 0,
                     damage_over_time: false,
@@ -846,7 +890,8 @@ impl CombatLogParser for WoWVanillaParser {
         if let Some(captures) = RE_DAMAGE_SPELL_ABSORB_SELF.captures(&content) {
             let victim = parse_unit(&mut self.cache_unit, data, captures.get(1)?.as_str())?;
             let attacker = parse_unit(&mut self.cache_unit, data, captures.get(2)?.as_str())?;
-            let spell_id = parse_spell_args(&mut self.cache_spell_id, data, captures.get(3)?.as_str())?;
+            let spell_name = captures.get(3)?.as_str();
+            let spell_id = parse_spell_args(&mut self.cache_spell_id, data, spell_name)?;
             self.collect_participant(&victim, captures.get(1)?.as_str(), event_ts);
             self.collect_participant(&attacker, captures.get(2)?.as_str(), event_ts);
             self.collect_active_map(data, &attacker, event_ts);
@@ -865,6 +910,7 @@ impl CombatLogParser for WoWVanillaParser {
                     attacker,
                     victim,
                     spell_id: Some(spell_id),
+                    spell_name: Some(spell_name.to_string()),
                     hit_mask: HitType::FullAbsorb as u32,
                     blocked: 0,
                     damage_over_time: false,
@@ -875,6 +921,7 @@ impl CombatLogParser for WoWVanillaParser {
 
         if let Some(captures) = RE_DAMAGE_REFLECT.captures(&content) {
             let attacker = parse_unit(&mut self.cache_unit, data, captures.get(1)?.as_str())?;
+            let spell_name = captures.get(2)?.as_str();
             let spell_id = parse_spell_args(&mut self.cache_spell_id, data, captures.get(2)?.as_str())?;
             let victim = parse_unit(&mut self.cache_unit, data, captures.get(3)?.as_str())?;
             self.collect_participant(&attacker, captures.get(1)?.as_str(), event_ts);
@@ -895,6 +942,7 @@ impl CombatLogParser for WoWVanillaParser {
                     attacker,
                     victim,
                     spell_id: Some(spell_id),
+                    spell_name: Some(spell_name.to_string()),
                     hit_mask: HitType::Reflect as u32,
                     blocked: 0,
                     damage_over_time: false,
@@ -906,13 +954,14 @@ impl CombatLogParser for WoWVanillaParser {
         if let Some(captures) = RE_DAMAGE_PROC_RESIST.captures(&content) {
             let victim = parse_unit(&mut self.cache_unit, data, captures.get(1)?.as_str())?;
             let attacker = parse_unit(&mut self.cache_unit, data, captures.get(2)?.as_str())?;
-            let spell_id = parse_spell_args(&mut self.cache_spell_id, data, captures.get(3)?.as_str())?;
+            let spell_name = captures.get(3)?.as_str();
+            let spell_id = parse_spell_args(&mut self.cache_spell_id, data, spell_name)?;
             self.collect_participant(&attacker, captures.get(1)?.as_str(), event_ts);
             self.collect_participant(&victim, captures.get(2)?.as_str(), event_ts);
             self.collect_active_map(data, &attacker, event_ts);
             self.collect_active_map(data, &victim, event_ts);
 
-            assign_spec_from_cast(self.participants.get_mut(&attacker.unit_id), captures.get(3)?.as_str(), event_ts);
+            assign_spec_from_cast(self.participants.get_mut(&attacker.unit_id), spell_name, event_ts);
 
             return Some(vec![
                 MessageType::SpellCast(SpellCast {
@@ -925,6 +974,7 @@ impl CombatLogParser for WoWVanillaParser {
                     attacker,
                     victim,
                     spell_id: Some(spell_id),
+                    spell_name: Some(spell_name.to_string()),
                     hit_mask: HitType::FullResist as u32,
                     blocked: 0,
                     damage_over_time: false,
@@ -935,7 +985,8 @@ impl CombatLogParser for WoWVanillaParser {
 
         if let Some(captures) = RE_DAMAGE_SPELL_IMMUNE.captures(&content) {
             let attacker = parse_unit(&mut self.cache_unit, data, captures.get(1)?.as_str())?;
-            let spell_id = parse_spell_args(&mut self.cache_spell_id, data, captures.get(2)?.as_str())?;
+            let spell_name = captures.get(2)?.as_str();
+            let spell_id = parse_spell_args(&mut self.cache_spell_id, data, spell_name)?;
             let victim = parse_unit(&mut self.cache_unit, data, captures.get(3)?.as_str())?;
             self.collect_participant(&attacker, captures.get(1)?.as_str(), event_ts);
             self.collect_participant(&victim, captures.get(3)?.as_str(), event_ts);
@@ -955,6 +1006,7 @@ impl CombatLogParser for WoWVanillaParser {
                     attacker,
                     victim,
                     spell_id: Some(spell_id),
+                    spell_name: Some(spell_name.to_string()),
                     hit_mask: HitType::Immune as u32,
                     blocked: 0,
                     damage_over_time: false,
@@ -978,6 +1030,7 @@ impl CombatLogParser for WoWVanillaParser {
                 attacker,
                 victim,
                 spell_id: None,
+                spell_name: None,
                 hit_mask: HitType::Miss as u32,
                 blocked: 0,
                 damage_over_time: false,
@@ -1005,6 +1058,7 @@ impl CombatLogParser for WoWVanillaParser {
                 attacker,
                 victim,
                 spell_id: None,
+                spell_name: None,
                 hit_mask: hit_type as u32,
                 blocked: 0,
                 damage_over_time: false,
@@ -1029,6 +1083,7 @@ impl CombatLogParser for WoWVanillaParser {
                 attacker,
                 victim,
                 spell_id: None,
+                spell_name: None,
                 hit_mask: hit_type as u32,
                 blocked: 0,
                 damage_over_time: false,
@@ -1048,6 +1103,7 @@ impl CombatLogParser for WoWVanillaParser {
                 attacker,
                 victim,
                 spell_id: None,
+                spell_name: None,
                 hit_mask: HitType::Immune as u32,
                 blocked: 0,
                 damage_over_time: false,

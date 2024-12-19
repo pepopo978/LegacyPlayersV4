@@ -5,6 +5,7 @@ pub struct DamageDone {
     pub attacker: Unit,
     pub victim: Unit,
     pub spell_id: Option<u32>,
+    pub spell_name: Option<String>,
     pub hit_mask: u32,
     pub blocked: u32,
     pub damage_over_time: bool,

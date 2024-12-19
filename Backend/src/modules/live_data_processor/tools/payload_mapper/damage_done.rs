@@ -30,6 +30,7 @@ impl MapDamageDone for [u8] {
             attacker: self[0..9].to_unit()?,
             victim: self[9..18].to_unit()?,
             spell_id: None,
+            spell_name: None,
             blocked: byte_reader::read_u32(&self[18..22])?,
             hit_mask: byte_reader::read_u32(&self[22..26])?,
             damage_over_time: false,
@@ -45,6 +46,7 @@ impl MapDamageDone for [u8] {
             attacker: self[0..9].to_unit()?,
             victim: self[9..18].to_unit()?,
             spell_id: Some(byte_reader::read_u32(&self[18..22])?),
+            spell_name: None,
             blocked: byte_reader::read_u32(&self[22..26])?,
             damage_components: vec![DamageComponent {
                 school_mask: self[26],

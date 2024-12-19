@@ -13,7 +13,7 @@ use crate::modules::live_data_processor::tools::cbl_parser::CombatLogParser;
 use crate::modules::live_data_processor::tools::GUID;
 use crate::util::database::{Execute, Select};
 use crate::modules::live_data_processor::LiveDataProcessor;
-use crate::util::hash_str::hash_str;
+use crate::modules::live_data_processor::tools::cbl_parser::wow_vanilla::hashed_unit_id::{get_hashed_player_unit_id};
 
 pub fn parse_cbl(parser: &mut impl CombatLogParser,
                  live_data_processor: &LiveDataProcessor,
@@ -26,6 +26,17 @@ pub fn parse_cbl(parser: &mut impl CombatLogParser,
                  member_id: u32,
                  only_parse_characters: bool) -> Option<(u32, Vec<Message>)> {
     let mut messages = Vec::with_capacity(1000000);
+
+    let mut combat_started_once = false;
+
+    let combat_ignore_spells = [
+        "Distract",
+        "Hunter's Mark",
+        "Calm Elements",
+        "Mind Soothe",
+        "Mind Control",
+        "Mind Vision",
+    ];
 
     // Pre processing
     // TODO: Handle 31/12 => 01/01 raids
@@ -46,37 +57,58 @@ pub fn parse_cbl(parser: &mut impl CombatLogParser,
                 event_timestamp = last_year.timestamp_millis() as u64;
             } else {
                 event_timestamp = timestamp.timestamp_millis() as u64;
-            }
-            /*
-            if event_timestamp < start_parse || event_timestamp > end_parse {
-                continue;
-            }
-             */
+                /*
+                if event_timestamp < start_parse || event_timestamp > end_parse {
+                    continue;
+                }
+                 */
 
-            if let Some(message_types) = parser.parse_cbl_line(data, event_timestamp, meta[1].trim_end_matches('\r')) {
-                let mut message_count = (messages.len() + message_types.len()) as u64;
-                let mut msg_type_len = message_types.len() as u64;
-                for message_type in message_types {
-                    let mut ts_offset = 0;
-                    if let MessageType::Summon(summon) = &message_type {
-                        if let Some(entry) = summon.unit.unit_id.get_entry() {
-                            match entry {
-                                // Order for Shaman Totems
-                                15439 | 15430 => ts_offset = 50,
+                if let Some(message_types) = parser.parse_cbl_line(data, event_timestamp, meta[1].trim_end_matches('\r')) {
+                    let mut message_count = (messages.len() + message_types.len()) as u64;
+                    let mut msg_type_len = message_types.len() as u64;
+                    for message_type in message_types {
+                        // if combat started, we can start adding messages
+                        if !combat_started_once {
+                            match &message_type {
+                                MessageType::MeleeDamage(dmg) | MessageType::SpellDamage(dmg) => {
+                                    let mut ignore = dmg.victim.unit_id == 0 || dmg.attacker.unit_id == 0 || dmg.victim.unit_id == dmg.attacker.unit_id;
+
+                                    if !ignore {
+                                        if let Some(spell_name) = dmg.spell_name.as_ref() {
+                                            ignore = combat_ignore_spells.contains(&spell_name.as_str());
+                                        }
+                                    }
+
+                                    if !ignore {
+                                        combat_started_once = true;
+                                    }
+                                }
                                 _ => {}
-                            };
+                            }
+                        } else {
+                            let mut ts_offset = 0;
+                            if let MessageType::Summon(summon) = &message_type {
+                                if let Some(entry) = summon.unit.unit_id.get_entry() {
+                                    match entry {
+                                        // Order for Shaman Totems
+                                        15439 | 15430 => ts_offset = 50,
+                                        _ => {}
+                                    };
+                                }
+                            }
+
+                            message_count -= 1;
+                            msg_type_len -= 1;
+
+                            messages.push(Message {
+                                api_version: 0,
+                                message_length: 0,
+                                timestamp: event_timestamp - msg_type_len - ts_offset,
+                                message_count,
+                                message_type,
+                            });
                         }
                     }
-
-                    message_count -= 1;
-                    msg_type_len -= 1;
-                    messages.push(Message {
-                        api_version: 0,
-                        message_length: 0,
-                        timestamp: event_timestamp - msg_type_len - ts_offset,
-                        message_count,
-                        message_type,
-                    });
                 }
             }
         }
@@ -207,7 +239,8 @@ pub fn parse_cbl(parser: &mut impl CombatLogParser,
     let mut looking_for_new_pom_owner = None;
     let mut recent_spell_casts: VecDeque<(u64, SpellCast)> = VecDeque::new();
 
-    let deathknight_understudy_unit_id = hash_str("Deathknight Understudy") & 0x0000FFFFFFFFFFFF;
+    let deathknight_understudy_unit_id = get_hashed_player_unit_id("Deathknight Understudy");
+    // let patchwerk_unit_id = get_npc_unit_id(data, "Patchwerk").unwrap();
 
     for Message { timestamp, message_count, message_type, .. } in messages.iter_mut() {
         // Insert Instance Map Messages
@@ -325,7 +358,7 @@ pub fn parse_cbl(parser: &mut impl CombatLogParser,
         // We assume CBT Start when we see it doing sth
         // We assume end if it dies or after a timeout
         match message_type {
-            MessageType::SpellCastAttempt(cast) => {
+            MessageType::SpellCast(cast) => {
                 if !cast.caster.is_player {
                     recent_spell_casts.push_back((*timestamp, cast.clone()));
                 }
@@ -362,7 +395,15 @@ pub fn parse_cbl(parser: &mut impl CombatLogParser,
                     }
                 }
 
-                ignore = ignore || dmg.victim.unit_id == 0 || dmg.attacker.unit_id == 0 || dmg.spell_id.contains(&72273) || dmg.spell_id.contains(&72550) | dmg.spell_id.contains(&70598);
+                if !ignore {
+                    ignore = dmg.victim.unit_id == 0 || dmg.attacker.unit_id == 0 || dmg.victim.unit_id == dmg.attacker.unit_id
+                }
+
+                if !ignore {
+                    if let Some(spell_name) = dmg.spell_name.as_ref() {
+                        ignore = combat_ignore_spells.contains(&spell_name.as_str());
+                    }
+                }
 
                 if !ignore {
                     add_combat_event(parser, data, expansion_id, &mut additional_messages, &mut last_combat_update, *timestamp, *message_count, &dmg.attacker);
@@ -388,13 +429,6 @@ pub fn parse_cbl(parser: &mut impl CombatLogParser,
                 }
             }
             MessageType::Heal(heal_done) => {
-                if heal_done.target.unit_id.get_entry().contains(&36789) {
-                    add_combat_event(parser, data, expansion_id, &mut additional_messages, &mut last_combat_update, *timestamp, *message_count, &heal_done.target);
-                }
-                if heal_done.caster.unit_id.get_entry().contains(&36789) {
-                    add_combat_event(parser, data, expansion_id, &mut additional_messages, &mut last_combat_update, *timestamp, *message_count, &heal_done.caster);
-                }
-
                 if heal_done.caster.unit_id == 0 {
                     if let Some(unit) = find_casting_unit(parser, heal_done.spell_id, &mut last_combat_update, *timestamp) {
                         heal_done.caster = unit;
@@ -427,11 +461,6 @@ pub fn parse_cbl(parser: &mut impl CombatLogParser,
                             }),
                         ));
                     }
-                }
-            }
-            MessageType::SpellCast(spell_cast) => {
-                if spell_cast.spell_id == 33076 {
-                    pom_owner.insert(spell_cast.target.as_ref().unwrap().unit_id, spell_cast.caster.unit_id);
                 }
             }
             MessageType::AuraApplication(aura_app) => {
