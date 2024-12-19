@@ -89,16 +89,17 @@ impl GetCharacter for Armory {
         // First, look for moments with talent specialization within 6 hour
         let ids: Vec<u32> = db_main.select_wparams(
             "SELECT t1.id FROM armory_character_history t1 \
-             JOIN armory_character_info t2 ON t1.character_info_id = t2.id \
-             WHERE t1.character_id = :character_id \
-               AND t2.talent_specialization IS NOT NULL \
-               AND t1.timestamp BETWEEN (:timestamp - :max_timestamp) AND (:timestamp + :max_timestamp)",
+     WHERE t1.character_id = :character_id \
+       AND t1.character_info_id IN ( \
+           SELECT t2.id FROM armory_character_info t2 WHERE t2.talent_specialization IS NOT NULL \
+         ) \
+       AND t1.timestamp BETWEEN (:timestamp - :max_timestamp) AND (:timestamp + :max_timestamp)",
             |mut row| row.take(0).unwrap(),
             params! {
-                "character_id" => character_id,
-                "timestamp" => timestamp,
-                "max_timestamp" => 21600
-            },
+        "character_id" => character_id,
+        "timestamp" => timestamp,
+        "max_timestamp" => 21600
+    },
         );
 
 
