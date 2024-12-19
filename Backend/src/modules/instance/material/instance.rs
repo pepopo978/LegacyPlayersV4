@@ -111,7 +111,7 @@ impl Instance {
          JOIN instance_raid B ON A.id = B.instance_meta_id \
          JOIN instance_uploads C ON A.upload_id = C.id \
          WHERE A.updated_specs = 0 \
-         LIMIT 1", // Restrict to one result
+         LIMIT 10", // Restrict to 10 results
                         |mut row| InstanceMeta {
                             instance_meta_id: row.take(0).unwrap(),
                             server_id: row.take(1).unwrap(),
