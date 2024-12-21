@@ -36,6 +36,7 @@ pub fn parse_cbl(parser: &mut impl CombatLogParser,
         "Mind Soothe",
         "Mind Control",
         "Mind Vision",
+        "Enlighten"
     ];
 
     // Pre processing
