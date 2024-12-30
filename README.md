@@ -2,8 +2,6 @@
 
 Latest turtlogs storage backup: https://drive.google.com/file/d/1wGhalh2A-0y297nGxhpWxwP0HXYAi4lW/view?usp=sharing
 
-Latest turtlogs database backup: https://drive.google.com/file/d/1IQsAUeopMHpvwDI3i0pYfSAVvgNAdfBU/view?usp=sharing
-
 # Legacy Players: A Community-Driven World of Warcraft Data Platform
 
 Welcome to Legacy Players, the collaborative project tailored for programmers within the World of Warcraft community. Initiated in 2022 by the Turtle WoW Team, Legacy Players is a platform designed to facilitate the sharing and analysis of raid logs, PvP logs, and armory data across various expansion packs. As developers, you play a crucial role in preserving the rich gaming history and performance insights.
