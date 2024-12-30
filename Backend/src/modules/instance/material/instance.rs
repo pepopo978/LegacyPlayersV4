@@ -315,16 +315,55 @@ fn calculate_speed_kills(instance_metas: Arc<RwLock<(u32, HashMap<u32, InstanceM
 }
 
 fn calculate_season_index(ts: u64) -> u8 {
-    static FIRST_SEASON_YEAR: i32 = 2020;
-    static SEASON_DURATION: i32 = 3;
-    let today = NaiveDateTime::from_timestamp((ts / 1000) as i64, 0);
-    let year = today.year();
-    let month = today.month() as i32;
-    let months_since = (year - FIRST_SEASON_YEAR) * 12 + month;
-    if (months_since % SEASON_DURATION) == 0 {
-        return (months_since / SEASON_DURATION) as u8;
+    let ts_no_millis = ts / 1000;
+
+
+    if ts_no_millis < 1731024000 {
+        // season 0 < nov 8 2024 CC1
+        return 0;
+    } else if ts_no_millis < 1731628800 {
+        // season 1 < nov 15 2024
+        return 1;
+    } else if ts_no_millis < 1732233600 {
+        // season 2 < nov 22 2024
+        return 2;
+    }else if ts_no_millis < 1733011200 {
+        // season 3 < dec 1 2024
+        return 3;
+    } else if ts_no_millis < 1733616000 {
+        // season 4 < dec 8 2024
+        return 4;
+    } else if ts_no_millis < 1734220800 {
+        // season 5 < dec 15 2024
+        return 5;
+    } else if ts_no_millis < 1734825600 {
+        // season 6 < dec 22 2024
+        return 6;
+    } else if ts_no_millis < 1735689600 {
+        // season 7 < jan 1 2025
+        return 7;
     }
-    return (months_since / SEASON_DURATION) as u8 + 1;
+
+    static INITIAL_SEASONS: i32 = 7;
+    static FIRST_SEASON_YEAR: i32 = 2025;
+    let date = NaiveDateTime::from_timestamp(ts_no_millis as i64, 0);
+    let year = date.year();
+    let month = date.month() as i32; // 1 indexed
+    let day = date.day() as i32;
+
+    let year_weeks = (year - FIRST_SEASON_YEAR) * 12 * 4;
+    let full_month_weeks = (month-1) * 4;
+    let mut partial_month_weeks = 1;
+    if day > 21 {
+        partial_month_weeks = 4;
+    } else if day > 14 {
+        partial_month_weeks = 3;
+    } else if day > 7 {
+        partial_month_weeks = 2;
+    }
+
+    let weeks_since = year_weeks + full_month_weeks + partial_month_weeks;
+    (weeks_since + INITIAL_SEASONS) as u8
 }
 
 fn update_instance_kill_attempts(instance_kill_attempts: Arc<RwLock<(u32, HashMap<u32, Vec<InstanceAttempt>>)>>, db_main: &mut impl Select) {

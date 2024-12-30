@@ -411,7 +411,7 @@
         "classes": "Select class",
         "servers": "Select server",
         "difficulties": "Select difficulties",
-        "seasons": "Select seasons"
+        "seasons": "Select weeks"
     },
     "Addon": {
         "name": "Name",

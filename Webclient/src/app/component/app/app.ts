@@ -18,7 +18,6 @@ export class AppComponent implements OnInit, OnChanges {
 
 
     title = "LegacyPlayers";
-    private googleAnalyticsSubscription: Subscription
 
     enable_ads: boolean = false;
     is_on_viewer_site: boolean = false;
@@ -31,19 +30,16 @@ export class AppComponent implements OnInit, OnChanges {
         private router: Router,
         private apiService: APIService
     ) {
-        this.settingsService.subscribe("cookieDecisions", item => this.configure_google_analytics(item));
         (window as any).addEventListener("beforeinstallprompt", (e) => () => this.prompt_for_pwa(e));
         this.router.events.subscribe(event => this.set_ad_width_flags());
     }
 
     ngOnInit(): void {
-        this.configure_google_analytics(this.settingsService.get("cookieDecisions"));
         this.retrieve_account_information();
         setInterval(() => this.set_ad_width_flags(), 500);
     }
 
     ngOnChanges(): void {
-        this.configure_google_analytics(this.settingsService.get("cookieDecisions"));
     }
 
     set_ad_width_flags(): void {
@@ -51,30 +47,6 @@ export class AppComponent implements OnInit, OnChanges {
         this.enough_width_for_side_ads = document.getElementsByTagName("body")[0].clientWidth >= 800;
         const ad_element = document.getElementById("bottom_layer");
         this.enough_bottom_space = !!ad_element && ad_element.clientWidth >= 2000;
-    }
-
-    private configure_google_analytics(cookieDecisions: any): void {
-        if (!gtag || !!this.googleAnalyticsSubscription)
-            return;
-
-        /*
-        if (!cookieDecisions || !cookieDecisions.other[0]) {
-            if (this.googleAnalyticsSubscription) {
-                this.googleAnalyticsSubscription.unsubscribe();
-            }
-            return;
-        }*/
-
-        gtag("config", "G-88RX038GXX");
-        this.googleAnalyticsSubscription = this.router.events.subscribe(event => {
-            if (event instanceof NavigationEnd && (window as any).ga) {
-                (window as any).ga("create", "G-88RX038GXX", "auto");
-                (window as any).ga("set", "anonymizeIp", true);
-                (window as any).ga("set", "allowAdFeatures", false);
-                (window as any).ga("set", "page", event.urlAfterRedirects);
-                (window as any).ga("send", "pageview");
-            }
-        });
     }
 
     private prompt_for_pwa(e: any): void {

@@ -157,6 +157,10 @@ export class DataService implements OnDestroy {
         ];
     }
 
+    get months(): Array<string> {
+        return ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+    }
+
     get specs(): Array<SelectOption> {
         return [...this.spec_mapping.entries()].map(([spec_id, meta]) => {
             return {value: spec_id, label_key: meta[2]};
@@ -164,20 +168,80 @@ export class DataService implements OnDestroy {
     }
 
     get ranking_seasons(): Array<SelectOption> {
-        const first_season_year = 2020;
-        const first_season_month = 1;
+        const result = [];
+
+        // add 7 2024 seasons manually
+        result.push({
+            label_key: "Nov Week 2 2024",
+            value: result.length + 1
+        });
+        result.push({
+            label_key: "Nov Week 3 2024",
+            value: result.length + 1
+        });
+        result.push({
+            label_key: "Nov Week 4+ 2024",
+            value: result.length + 1
+        });
+        result.push({
+            label_key: "Dec Week 1 2024",
+            value: result.length + 1
+        });
+        result.push({
+            label_key: "Dec Week 2 2024",
+            value: result.length + 1
+        });
+        result.push({
+            label_key: "Dec Week 3 2024",
+            value: result.length + 1
+        });
+        result.push({
+            label_key: "Dec Week 4+ 2024",
+            value: result.length + 1
+        });
+
+        const first_season_year = 2025;
         const today = new Date();
         const year = today.getFullYear();
-        const month = today.getMonth() + 1;
-        const months_since_start = (year - first_season_year) * 12 - first_season_month + month;
-        const num_ranking_seasons = ((months_since_start + 1) / 3);
+        const month = today.getMonth();  // 0 indexed
+        const day = today.getDate();
 
-        const result = [];
-        for (let i = 0; i < num_ranking_seasons; ++i)
-            result.push({
-                label_key: "Season Q" + ((i % 4) + 1).toString() + " " + (first_season_year + Math.floor(i / 4)).toString(),
-                value: (i + 1)
-            });
+        const year_weeks = (year - first_season_year) * 12 * 4;
+        const full_month_weeks = month * 4;
+        let partial_month_weeks = 1;
+        if (day > 21) {
+            partial_month_weeks = 4;
+        } else if (day > 14) {
+            partial_month_weeks = 3;
+        } else if (day > 7) {
+            partial_month_weeks = 2;
+        }
+
+        // add 2025+ dynamically
+        if (year_weeks >= 0) {
+            const num_weeks = year_weeks + full_month_weeks + partial_month_weeks;
+
+            let weeks: string;
+            let week_remaining: number;
+            for (let i = 0; i < num_weeks; ++i) {
+
+                week_remaining = i % 4;
+                if (week_remaining === 0) {
+                    weeks = "Week 1";
+                } else if (week_remaining === 1) {
+                    weeks = "Week 2";
+                } else if (week_remaining === 2) {
+                    weeks = "Week 3";
+                } else {
+                    weeks = "Week 4+";
+                }
+
+                result.push({
+                    label_key: this.months[Math.trunc(i / 4) % 12] + " " + weeks + " " + (first_season_year + Math.floor(i / 48)).toString(),
+                    value: result.length + 1
+                });
+            }
+        }
         return result;
     }
 

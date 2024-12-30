@@ -1,4 +1,11 @@
-importScripts('https://storage.googleapis.com/workbox-cdn/releases/5.1.2/workbox-sw.js');
+
+// service-worker.js - Modified to use local Workbox files
+importScripts('./js/workbox/workbox-sw.js');
+
+// Configure Workbox path
+workbox.setConfig({
+    modulePathPrefix: './js/workbox/'
+});
 
 const cache_first_permanent = [
     "/API/data/race/localized",

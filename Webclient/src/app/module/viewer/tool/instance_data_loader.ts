@@ -175,14 +175,14 @@ export class InstanceDataLoader {
 
     private async load_data(event_types: Array<number>): Promise<void> {
         for (const event_type of event_types)
-            await this.load_ressource(event_type);
+            await this.load_resource(event_type);
         if (!this.initialized) {
             this.initialized = true;
             (self as any).postMessage(["KNECHT_UPDATES", KnechtUpdates.Initialized]);
         }
     }
 
-    private async load_ressource(event_type: number): Promise<void> {
+    private async load_resource(event_type: number): Promise<void> {
         let container = this.container_getter.get(event_type)[0]();
         const container_length = container.length;
         const last_event_id = container_length === 0 ? 0 : container[container_length - 1][0];
