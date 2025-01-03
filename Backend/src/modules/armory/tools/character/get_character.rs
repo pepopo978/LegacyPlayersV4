@@ -88,12 +88,12 @@ impl GetCharacter for Armory {
 
         // First, look for moments with talent specialization within 6 hour
         let ids: Vec<u32> = db_main.select_wparams(
-            "SELECT t1.id FROM armory_character_history t1 \
+            "SELECT t1.id, GREATEST(t1.timestamp, :timestamp) - LEAST(t1.timestamp, :timestamp) as diff FROM armory_character_history t1 \
      WHERE t1.character_id = :character_id \
        AND t1.character_info_id IN ( \
            SELECT t2.id FROM armory_character_info t2 WHERE t2.talent_specialization IS NOT NULL \
          ) \
-       AND t1.timestamp BETWEEN (:timestamp - :max_timestamp) AND (:timestamp + :max_timestamp)",
+       AND t1.timestamp BETWEEN (:timestamp - :max_timestamp) AND (:timestamp + :max_timestamp) order by diff LIMIT 1;",
             |mut row| row.take(0).unwrap(),
             params! {
         "character_id" => character_id,
@@ -106,14 +106,7 @@ impl GetCharacter for Armory {
         for id in ids {
             for moment in &character.history_moments {
                 if moment.id == id {
-                    if closest_history_moment.is_none()
-                        || (timestamp as i64 - moment.timestamp as i64).abs()
-                        < (timestamp as i64
-                        - closest_history_moment.unwrap().timestamp as i64)
-                        .abs()
-                    {
-                        closest_history_moment = Some(moment);
-                    }
+                    closest_history_moment = Some(moment);
                 }
             }
         }
