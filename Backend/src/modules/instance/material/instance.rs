@@ -12,7 +12,6 @@ use crate::modules::instance::dto::{InstanceViewerAttempt, RankingResult, SpeedK
 use crate::modules::instance::tools::{FindInstanceGuild};
 use crate::{mysql, params};
 use crate::util::database::*;
-use chrono::{NaiveDateTime, Datelike};
 use zip::ZipArchive;
 use crate::modules::data::Data;
 use crate::modules::live_data_processor::tools::log_parser::parse_cbl;
@@ -315,12 +314,14 @@ fn calculate_speed_kills(instance_metas: Arc<RwLock<(u32, HashMap<u32, InstanceM
 }
 
 fn calculate_season_index(ts: u64) -> u8 {
-    let ts_no_millis = (ts / 1000) as i32;
+    let starting_unix_time = 1731470400000; // Wed Nov 13 2024 04:00:00 GMT+0000 1st instance reset after CC2
+    let one_week_in_ms = 604800000;
 
-    let starting_unix_time = 1731470400; // Wed Nov 13 2024 04:00:00 GMT+0000 1st instance reset after CC2
-    let one_week_in_seconds = 604800;
+    if ts < starting_unix_time {
+        return 0;
+    }
 
-    (1 + (ts_no_millis-starting_unix_time) / one_week_in_seconds) as u8
+    (1 + (ts-starting_unix_time) / one_week_in_ms) as u8
 }
 
 fn update_instance_kill_attempts(instance_kill_attempts: Arc<RwLock<(u32, HashMap<u32, Vec<InstanceAttempt>>)>>, db_main: &mut impl Select) {
