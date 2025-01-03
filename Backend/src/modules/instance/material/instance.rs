@@ -359,7 +359,7 @@ fn update_instance_rankings_dps(instance_rankings_dps: Arc<RwLock<(u32, HashMap<
             (B.end_ts - B.start_ts) as duration, B.instance_meta_id, C.map_difficulty, B.start_ts FROM instance_ranking_damage A \
             JOIN instance_attempt B ON A.attempt_id = B.id \
             JOIN instance_raid C ON B.instance_meta_id = C.instance_meta_id \
-            WHERE A.id > :last_queried_id AND B.rankable = 1 AND B.start_ts >= 1731024000000  ORDER BY A.id", // filter stuff before CC2
+            WHERE A.id > :last_queried_id AND B.rankable = 1 AND B.start_ts >= 1731470400000  ORDER BY A.id", // filter stuff before CC2
             |mut row| {
                 let id: u32 = row.take(0).unwrap();
                 let character_id: u32 = row.take(1).unwrap();
@@ -411,7 +411,7 @@ fn update_instance_rankings_hps(instance_rankings_hps: Arc<RwLock<(u32, HashMap<
             (B.end_ts - B.start_ts) as duration, B.instance_meta_id, C.map_difficulty, B.start_ts FROM instance_ranking_heal A \
             JOIN instance_attempt B ON A.attempt_id = B.id \
             JOIN instance_raid C ON B.instance_meta_id = C.instance_meta_id \
-            WHERE A.id > :last_queried_id AND B.rankable = 1 AND B.start_ts >= 1731024000000 ORDER BY A.id",  // filter stuff before CC2
+            WHERE A.id > :last_queried_id AND B.rankable = 1 AND B.start_ts >= 1731470400000 ORDER BY A.id",  // filter stuff before CC2
             |mut row| {
                 let id: u32 = row.take(0).unwrap();
                 let character_id: u32 = row.take(1).unwrap();
@@ -463,7 +463,7 @@ fn update_instance_rankings_tps(instance_rankings_tps: Arc<RwLock<(u32, HashMap<
             (B.end_ts - B.start_ts) as duration, B.instance_meta_id, C.map_difficulty, B.start_ts FROM instance_ranking_threat A \
             JOIN instance_attempt B ON A.attempt_id = B.id \
             JOIN instance_raid C ON B.instance_meta_id = C.instance_meta_id \
-            WHERE A.id > :last_queried_id AND B.rankable = 1 AND B.start_ts >= 1731024000000 ORDER BY A.id", // filter stuff before CC2
+            WHERE A.id > :last_queried_id AND B.rankable = 1 AND B.start_ts >= 1731470400000 ORDER BY A.id", // filter stuff before CC2
             |mut row| {
                 let id: u32 = row.take(0).unwrap();
                 let character_id: u32 = row.take(1).unwrap();
