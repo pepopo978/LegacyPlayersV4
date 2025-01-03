@@ -168,81 +168,34 @@ export class DataService implements OnDestroy {
     }
 
     get ranking_seasons(): Array<SelectOption> {
-        const result = [];
+        const starting_unix_time = 1731470400000; // Wed Nov 13 2024 04:00:00 GMT+0000 1st instance reset after CC2
+        const one_week_in_ms = 604800000;
+        const current_unix_time = Date.now();
 
-        // add 7 2024 seasons manually
-        result.push({
-            label_key: "Nov Week 2 2024",
-            value: result.length + 1
-        });
-        result.push({
-            label_key: "Nov Week 3 2024",
-            value: result.length + 1
-        });
-        result.push({
-            label_key: "Nov Week 4+ 2024",
-            value: result.length + 1
-        });
-        result.push({
-            label_key: "Dec Week 1 2024",
-            value: result.length + 1
-        });
-        result.push({
-            label_key: "Dec Week 2 2024",
-            value: result.length + 1
-        });
-        result.push({
-            label_key: "Dec Week 3 2024",
-            value: result.length + 1
-        });
-        result.push({
-            label_key: "Dec Week 4+ 2024",
-            value: result.length + 1
-        });
+        const results = [];
 
-        const first_season_year = 2025;
-        const today = new Date();
-        const year = today.getFullYear();
-        const month = today.getMonth();  // 0 indexed
-        const day = today.getDate();
+        let prev_t = starting_unix_time;
+        let t = starting_unix_time + one_week_in_ms;
 
-        const year_weeks = (year - first_season_year) * 12 * 4;
-        const full_month_weeks = month * 4;
-        let partial_month_weeks = 1;
-        if (day > 21) {
-            partial_month_weeks = 4;
-        } else if (day > 14) {
-            partial_month_weeks = 3;
-        } else if (day > 7) {
-            partial_month_weeks = 2;
-        }
+        // loop through weeks until past the current time
+        for (let i = 1; true; ++i) {
+            const prev_date = new Date(prev_t);
+            const date = new Date(t);
 
-        // add 2025+ dynamically
-        if (year_weeks >= 0) {
-            const num_weeks = year_weeks + full_month_weeks + partial_month_weeks;
+            // format each entry like "Dec 31 - Jan 1 2024"
+            results.push({
+                value: i,
+                label_key: `Week ${i} ${this.months[prev_date.getMonth()]} ${prev_date.getDate()} - ${this.months[date.getMonth()]} ${date.getDate()} ${date.getFullYear()}`
+            });
 
-            let weeks: string;
-            let week_remaining: number;
-            for (let i = 0; i < num_weeks; ++i) {
-
-                week_remaining = i % 4;
-                if (week_remaining === 0) {
-                    weeks = "Week 1";
-                } else if (week_remaining === 1) {
-                    weeks = "Week 2";
-                } else if (week_remaining === 2) {
-                    weeks = "Week 3";
-                } else {
-                    weeks = "Week 4+";
-                }
-
-                result.push({
-                    label_key: this.months[Math.trunc(i / 4) % 12] + " " + weeks + " " + (first_season_year + Math.floor(i / 48)).toString(),
-                    value: result.length + 1
-                });
+            if (t > current_unix_time) {
+                break;
             }
+            prev_t = t;
+            t += one_week_in_ms;
         }
-        return result;
+
+        return results;
     }
 
     get servers(): Observable<Array<AvailableServer>> {
