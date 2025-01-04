@@ -62,7 +62,7 @@ export class MeterUptimeService implements OnDestroy {
         const result = new Map<number, Array<[number, number]>>();
         for (const data_set of [result1, result2, result3]) {
             for (const [subject_id, [subject, uptime_intervals]] of data_set) {
-                this.unitService.get_unit_basic_information(subject, this.current_meta.end_ts ?? this.current_meta.start_ts);
+                this.unitService.get_unit_basic_information(subject, this.current_meta.start_ts ?? this.current_meta.end_ts);
 
                 // Merging
                 if (result.has(subject_id)) {

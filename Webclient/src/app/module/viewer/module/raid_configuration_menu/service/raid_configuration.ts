@@ -271,8 +271,8 @@ export class RaidConfigurationService implements OnDestroy {
         const result: Array<Observable<EventSource>> = [];
         // TODO: Optimize!
         for (const source of sources)
-            result.push(combineLatest([this.unitService.get_unit_name(source, this.current_meta.end_ts ?? this.current_meta.start_ts),
-                this.unitService.is_unit_boss(source), this.unitService.get_unit_hero_class_id(source, this.current_meta.end_ts ?? this.current_meta.start_ts)])
+            result.push(combineLatest([this.unitService.get_unit_name(source, this.current_meta.start_ts ?? this.current_meta.end_ts),
+                this.unitService.is_unit_boss(source), this.unitService.get_unit_hero_class_id(source, this.current_meta.start_ts ?? this.current_meta.end_ts)])
                 .pipe(map(([label, is_boss, hero_class_id]) => {
                     const isPlayer = is_player(source, false);
                     return {
@@ -297,8 +297,8 @@ export class RaidConfigurationService implements OnDestroy {
 
         // TODO: Optimize!
         for (const target of targets)
-            result.push(combineLatest([this.unitService.get_unit_name(target, this.current_meta.end_ts ?? this.current_meta.start_ts),
-                this.unitService.is_unit_boss(target), this.unitService.get_unit_hero_class_id(target, this.current_meta.end_ts ?? this.current_meta.start_ts)])
+            result.push(combineLatest([this.unitService.get_unit_name(target, this.current_meta.start_ts ?? this.current_meta.end_ts),
+                this.unitService.is_unit_boss(target), this.unitService.get_unit_hero_class_id(target, this.current_meta.start_ts ?? this.current_meta.end_ts)])
                 .pipe(map(([label, is_boss, hero_class_id]) => {
                     const isPlayer = is_player(target, false);
                     return {

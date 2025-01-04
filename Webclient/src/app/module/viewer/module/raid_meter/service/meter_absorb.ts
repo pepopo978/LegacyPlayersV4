@@ -58,7 +58,7 @@ export class MeterAbsorbService implements OnDestroy {
         const [data_points,] = await get_absorb_data_points(this.current_mode, this.instanceDataService);
 
         for (const [subject_id, ab_arr] of data_points) {
-            // this.unitService.get_unit_basic_information(subject, this.current_meta.end_ts ?? this.current_meta.start_ts);
+            // this.unitService.get_unit_basic_information(subject, this.current_meta.start_ts ?? this.current_meta.end_ts);
             if (!result.has(subject_id))
                 result.set(subject_id, new Map());
             const ability_map = result.get(subject_id);

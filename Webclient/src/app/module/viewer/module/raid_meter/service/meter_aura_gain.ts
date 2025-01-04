@@ -57,11 +57,11 @@ export class MeterAuraGainService implements OnDestroy {
         const data_set = await this.instanceDataService.knecht_aura.meter_aura_gain(this.current_mode);
         const result = [];
         for (const [subject_id, [subject, rows]] of data_set) {
-            this.unitService.get_unit_basic_information(subject, this.current_meta.end_ts ?? this.current_meta.start_ts);
+            this.unitService.get_unit_basic_information(subject, this.current_meta.start_ts ?? this.current_meta.end_ts);
             for (const row of rows) {
                 this.spellService.get_spell_basic_information(row.ability);
-                this.unitService.get_unit_basic_information(row.caster, this.current_meta.end_ts ?? this.current_meta.start_ts);
-                this.unitService.get_unit_basic_information(row.target, this.current_meta.end_ts ?? this.current_meta.start_ts);
+                this.unitService.get_unit_basic_information(row.caster, this.current_meta.start_ts ?? this.current_meta.end_ts);
+                this.unitService.get_unit_basic_information(row.target, this.current_meta.start_ts ?? this.current_meta.end_ts);
             }
             result.push([subject_id, rows]);
         }

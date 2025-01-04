@@ -54,7 +54,7 @@ export class RaidCompositionComponent implements OnDestroy {
     get current_ts(): number {
         if (!this.current_meta)
             return 0;
-        return this.current_meta.end_ts ?? this.current_meta.start_ts;
+        return this.current_meta.start_ts ?? this.current_meta.end_ts;
     }
 
     private create_participant_array(participants: Array<InstanceViewerParticipants>, role: Role): Array<Array<InstanceViewerParticipants>> {

@@ -229,7 +229,7 @@ export class EventLogService implements OnDestroy {
     }
 
     private process_combat_state(event: Event): [Observable<string>, number] {
-        const subject$ = this.unitService.get_unit_name(se_combat_state(event), this.current_meta.end_ts ?? this.current_meta.start_ts);
+        const subject$ = this.unitService.get_unit_name(se_combat_state(event), this.current_meta.start_ts ?? this.current_meta.end_ts);
         const subject_id = get_unit_id(se_combat_state(event), false);
         return [combineLatest([subject$])
             .pipe(map((([subject_name]) => {

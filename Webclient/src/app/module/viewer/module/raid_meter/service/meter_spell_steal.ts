@@ -62,8 +62,8 @@ export class MeterSpellStealService implements OnDestroy {
                 result.set(subject_id, un_aura_overview_rows);
             else result.get(subject_id).push(...un_aura_overview_rows);
             for (const row of un_aura_overview_rows) {
-                this.unitService.get_unit_basic_information(row.caster, this.current_meta.end_ts ?? this.current_meta.start_ts);
-                this.unitService.get_unit_basic_information(row.target, this.current_meta.end_ts ?? this.current_meta.start_ts);
+                this.unitService.get_unit_basic_information(row.caster, this.current_meta.start_ts ?? this.current_meta.end_ts);
+                this.unitService.get_unit_basic_information(row.target, this.current_meta.start_ts ?? this.current_meta.end_ts);
                 this.spellService.get_spell_basic_information(row.caster_spell_id);
                 this.spellService.get_spell_basic_information(row.target_spell_id);
             }

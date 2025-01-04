@@ -58,7 +58,7 @@ export class MeterSpellCastsService implements OnDestroy {
 
         const result1 = await this.instanceDataService.knecht_spell_cast.meter_spell_casts(this.current_mode);
         for (const [subject_id, [subject, abilities]] of result1) {
-            this.unitService.get_unit_basic_information(subject, this.current_meta.end_ts ?? this.current_meta.start_ts);
+            this.unitService.get_unit_basic_information(subject, this.current_meta.start_ts ?? this.current_meta.end_ts);
             if (!result.has(subject_id))
                 result.set(subject_id, new Map());
             const ability_map = result.get(subject_id);

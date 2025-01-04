@@ -61,7 +61,7 @@ export class MeterDamageService implements OnDestroy {
         const result2 = await result2_job;
         for (const data_set of [result1, result2]) {
             for (const [subject_id, [subject, abilities]] of data_set) {
-                this.unitService.get_unit_basic_information(subject, this.current_meta.end_ts ?? this.current_meta.start_ts);
+                this.unitService.get_unit_basic_information(subject, this.current_meta.start_ts ?? this.current_meta.end_ts);
                 if (!result.has(subject_id))
                     result.set(subject_id, new Map());
                 const ability_map = result.get(subject_id);

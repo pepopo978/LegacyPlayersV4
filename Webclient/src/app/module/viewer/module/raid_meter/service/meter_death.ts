@@ -60,7 +60,7 @@ export class MeterDeathService implements OnDestroy {
         const result2 = await this.instanceDataService.knecht_spell_damage.meter_death(this.current_mode);
         for (const data_set of [result1, result2]) {
             for (const [subject_id, [subject, death_overview_rows]] of data_set) {
-                this.unitService.get_unit_basic_information(subject, this.current_meta.end_ts ?? this.current_meta.start_ts);
+                this.unitService.get_unit_basic_information(subject, this.current_meta.start_ts ?? this.current_meta.end_ts);
                 if (!result.has(subject_id))
                     result.set(subject_id, death_overview_rows);
                 else {
@@ -79,8 +79,8 @@ export class MeterDeathService implements OnDestroy {
                 }
                 for (const row of death_overview_rows) {
                     this.spellService.get_spell_basic_information(row.killing_blow.ability_id);
-                    this.unitService.get_unit_basic_information(row.murder, this.current_meta.end_ts ?? this.current_meta.start_ts);
-                    this.unitService.get_unit_basic_information(row.murdered, this.current_meta.end_ts ?? this.current_meta.start_ts);
+                    this.unitService.get_unit_basic_information(row.murder, this.current_meta.start_ts ?? this.current_meta.end_ts);
+                    this.unitService.get_unit_basic_information(row.murdered, this.current_meta.start_ts ?? this.current_meta.end_ts);
                 }
             }
         }
