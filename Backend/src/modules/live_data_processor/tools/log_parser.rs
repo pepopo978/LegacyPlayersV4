@@ -55,7 +55,6 @@ pub fn parse_cbl(parser: &mut impl CombatLogParser,
             let future_timestamp = current_timestamp + Duration::hours(24);
             if timestamp > future_timestamp {
                 let last_year = timestamp - Duration::days(365);
-                println!("{}", last_year);
                 event_timestamp = last_year.timestamp_millis() as u64;
             } else {
                 event_timestamp = timestamp.timestamp_millis() as u64;
