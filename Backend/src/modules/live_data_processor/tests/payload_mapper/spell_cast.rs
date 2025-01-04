@@ -19,7 +19,7 @@ fn map_spell_cast_positive_with_target() {
     let spell_cast = result.unwrap();
     assert_eq!(spell_cast.caster.is_player, true);
     assert_eq!(spell_cast.caster.unit_id, 78);
-    assert_eq!(spell_cast.target, Some(Unit { is_player: true, unit_id: 22 }));
+    assert_eq!(spell_cast.target, Some(Unit { is_player: true, unit_id: 22, is_self_damage: false }));
     assert_eq!(spell_cast.spell_id, 77);
     assert_eq!(spell_cast.hit_mask, 8);
 }

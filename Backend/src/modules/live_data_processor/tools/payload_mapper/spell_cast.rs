@@ -14,7 +14,7 @@ impl MapSpellCast for [u8] {
         let target_id: Unit = self[9..18].to_unit()?;
         Ok(SpellCast {
             caster: self[0..9].to_unit()?,
-            target: if let Unit { is_player: _, unit_id: 0 } = target_id { None } else { Some(target_id) },
+            target: if let Unit { is_player: _, unit_id: 0, is_self_damage: false } = target_id { None } else { Some(target_id) },
             spell_id: byte_reader::read_u32(&self[18..22])?,
             hit_mask: byte_reader::read_u32(&self[22..26])?,
         })

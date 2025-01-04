@@ -30,7 +30,7 @@ fn parse_spell_damage() {
                 map_id: 249,
                 instance_id: caster_instance_id,
                 map_difficulty: 0,
-                unit: Unit { is_player: false, unit_id: caster_unit_id },
+                unit: Unit { is_player: false, unit_id: caster_unit_id, is_self_damage: false },
             }),
         },
         Message {
@@ -42,7 +42,7 @@ fn parse_spell_damage() {
                 map_id: 249,
                 instance_id: caster_instance_id,
                 map_difficulty: 0,
-                unit: Unit { is_player: false, unit_id: target_unit_id },
+                unit: Unit { is_player: false, unit_id: target_unit_id, is_self_damage: false },
             }),
         },
         Message {
@@ -51,7 +51,7 @@ fn parse_spell_damage() {
             message_length: 0,
             timestamp: 0,
             message_type: MessageType::Position(Position {
-                unit: Unit { is_player: false, unit_id: caster_unit_id },
+                unit: Unit { is_player: false, unit_id: caster_unit_id, is_self_damage: false },
                 x: 0,
                 y: 0,
                 z: 0,
@@ -64,7 +64,7 @@ fn parse_spell_damage() {
             message_length: 0,
             timestamp: 0,
             message_type: MessageType::Position(Position {
-                unit: Unit { is_player: false, unit_id: target_unit_id },
+                unit: Unit { is_player: false, unit_id: target_unit_id, is_self_damage: false },
                 x: 0,
                 y: 0,
                 z: 0,
@@ -77,8 +77,8 @@ fn parse_spell_damage() {
             message_length: 0,
             timestamp: 0,
             message_type: MessageType::SpellDamage(DamageDone {
-                attacker: Unit { is_player: false, unit_id: caster_unit_id },
-                victim: Unit { is_player: false, unit_id: target_unit_id },
+                attacker: Unit { is_player: false, unit_id: caster_unit_id, is_self_damage: false },
+                victim: Unit { is_player: false, unit_id: target_unit_id, is_self_damage: false },
                 spell_id: Some(26),
                 hit_mask: 1,
                 blocked: 1,
@@ -105,8 +105,8 @@ fn parse_spell_damage() {
         message_length: 0,
         timestamp: 5,
         message_type: MessageType::SpellCast(SpellCast {
-            caster: Unit { is_player: false, unit_id: caster_unit_id },
-            target: Some(Unit { is_player: false, unit_id: target_unit_id }),
+            caster: Unit { is_player: false, unit_id: caster_unit_id, is_self_damage: false },
+            target: Some(Unit { is_player: false, unit_id: target_unit_id, is_self_damage: false }),
             spell_id: 26,
             hit_mask: 7,
         }),
@@ -122,10 +122,11 @@ fn parse_spell_damage() {
         message_length: 0,
         timestamp: 75,
         message_type: MessageType::SpellCast(SpellCast {
-            caster: Unit { is_player: false, unit_id: target_unit_id },
+            caster: Unit { is_player: false, unit_id: target_unit_id, is_self_damage: false },
             target: Some(Unit {
                 is_player: false,
                 unit_id: 0xF140000000000000 + 22,
+                is_self_damage: false
             }),
             spell_id: 22,
             hit_mask: 1,
@@ -145,6 +146,7 @@ fn parse_spell_damage() {
             target: Some(Unit {
                 is_player: false,
                 unit_id: 0xF140000000000000 + 22,
+                is_self_damage: false
             }),
             spell_id: 22,
             hit_mask: 1,

@@ -15,7 +15,7 @@ fn map_death_positive() {
     // Assert
     assert!(result.is_ok());
     let death = result.unwrap();
-    assert_eq!(death.cause, Some(Unit { is_player: true, unit_id: 122 }));
+    assert_eq!(death.cause, Some(Unit { is_player: true, unit_id: 122, is_self_damage: false }));
     assert_eq!(death.victim.is_player, true);
     assert_eq!(death.victim.unit_id, 133);
 }

@@ -187,7 +187,7 @@ fn assign_spec_from_cast(caster: Option<&mut Participant>, spell: &str, timestam
         return;
     }
 
-    if spell == "Mortal Strike" || spell == "Sweeping Strikes" {
+    if spell == "Mortal Strike" || spell == "Sweeping Strikes" || spell == "Slam" {
         let p = caster.unwrap();
         p.record_talents(timestamp, WARRIOR_ARMS_SPEC);
     } else if spell == "Bloodthirst" {
@@ -685,7 +685,7 @@ impl CombatLogParser for WoWVanillaParser {
             let spell_name = captures.get(3)?.as_str();
             let spell_id = parse_spell_args(&mut self.cache_spell_id, data, spell_name)?;
             let stack_amount = u8::from_str_radix(captures.get(4)?.as_str(), 10).ok()?;
-            let caster = Unit { is_player: true, unit_id: 0 };
+            let caster = Unit { is_player: true, unit_id: 0, is_self_damage: false };
             self.collect_participant(&target, captures.get(1)?.as_str(), event_ts);
             self.collect_active_map(data, &target, event_ts);
 
@@ -707,25 +707,15 @@ impl CombatLogParser for WoWVanillaParser {
                         spell_id,
                         stack_amount: stack_amount as u32,
                         delta: stack_amount as i8,
-                    }),
-                    MessageType::SpellDamage(DamageDone {
-                        attacker: Unit { is_player: true, unit_id: 0 },
-                        victim: Unit { is_player: true, unit_id: 0 },
-                        spell_id: Some(spell_id),
-                        spell_name: Some(spell_name.to_string()),
-                        hit_mask: HitType::Miss as u32,
-                        blocked: 0,
-                        damage_over_time: false,
-                        damage_components: vec![],
-                    }),
+                    })
                 ])
-            }
+            };
         }
 
         if let Some(captures) = RE_AURA_FADE.captures(&content) {
             let target = parse_unit(&mut self.cache_unit, data, captures.get(2)?.as_str())?;
             let spell_id = parse_spell_args(&mut self.cache_spell_id, data, captures.get(1)?.as_str())?;
-            let caster = Unit { is_player: true, unit_id: 0 };
+            let caster = Unit { is_player: true, unit_id: 0, is_self_damage: false };
             self.collect_participant(&target, captures.get(2)?.as_str(), event_ts);
             self.collect_active_map(data, &target, event_ts);
 
@@ -1221,7 +1211,7 @@ impl CombatLogParser for WoWVanillaParser {
                             map_id: map.id as u32,
                             instance_id,
                             map_difficulty: 0,
-                            unit: Unit { is_player: false, unit_id: 1 },
+                            unit: Unit { is_player: false, unit_id: 1, is_self_damage: false },
                         }),
                     ));
                 }
@@ -1348,7 +1338,7 @@ impl CombatLogParser for WoWVanillaParser {
          * Dispel, Steal and Interrupt
          */
         if let Some(captures) = RE_AURA_DISPEL.captures(&content) {
-            let un_aura_caster = Unit { is_player: true, unit_id: 0 };
+            let un_aura_caster = Unit { is_player: true, unit_id: 0, is_self_damage: false };
             let un_aura_spell_id = 42;
             let target = parse_unit(&mut self.cache_unit, data, captures.get(1)?.as_str())?;
             let target_spell_id = parse_spell_args(&mut self.cache_spell_id, data, captures.get(2)?.as_str())?;
@@ -1429,10 +1419,11 @@ impl CombatLogParser for WoWVanillaParser {
                 0,
                 0,
                 MessageType::Summon(Summon {
-                    owner: Unit { is_player: true, unit_id: *owner_unit_id },
+                    owner: Unit { is_player: true, unit_id: *owner_unit_id, is_self_damage: false },
                     unit: Unit {
                         is_player: false,
                         unit_id: 0xF14000FFFF000000 + (*pet_unit_id & 0x0000000000FFFFFF),
+                        is_self_damage: false,
                     },
                 }),
             ));

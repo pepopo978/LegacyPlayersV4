@@ -74,7 +74,7 @@ pub fn parse_cbl(parser: &mut impl CombatLogParser,
                     if !combat_started_once {
                         match &message_type {
                             MessageType::MeleeDamage(dmg) | MessageType::SpellDamage(dmg) => {
-                                let mut ignore = dmg.victim.unit_id == 0 || dmg.attacker.unit_id == 0 || dmg.victim.unit_id == dmg.attacker.unit_id;
+                                let mut ignore = dmg.victim.unit_id == 0 || dmg.attacker.unit_id == 0 || dmg.attacker.is_self_damage || dmg.victim.unit_id == dmg.attacker.unit_id;
 
                                 if !ignore {
                                     if let Some(spell_name) = dmg.spell_name.as_ref() {
@@ -257,7 +257,7 @@ pub fn parse_cbl(parser: &mut impl CombatLogParser,
                             timestamp: *last_cbt_state + 5,
                             message_count: *message_count,
                             message_type: MessageType::CombatState(CombatState {
-                                unit: Unit { is_player: *is_player, unit_id: *unit_id },
+                                unit: Unit { is_player: *is_player, unit_id: *unit_id, is_self_damage: false },
                                 in_combat: false,
                             }),
                         });
@@ -296,7 +296,7 @@ pub fn parse_cbl(parser: &mut impl CombatLogParser,
                         map_id: map_id as u32,
                         instance_id,
                         map_difficulty: difficulty.unwrap_or(0),
-                        unit: Unit { is_player, unit_id },
+                        unit: Unit { is_player, unit_id, is_self_damage: false },
                     }),
                 ));
                 participants.insert(unit_id, is_player);
@@ -310,7 +310,7 @@ pub fn parse_cbl(parser: &mut impl CombatLogParser,
                         timestamp: *last_cbt_state + 5,
                         message_count: *message_count,
                         message_type: MessageType::CombatState(CombatState {
-                            unit: Unit { is_player: *is_player, unit_id: *unit_id },
+                            unit: Unit { is_player: *is_player, unit_id: *unit_id, is_self_damage: false },
                             in_combat: false,
                         }),
                     });
@@ -326,7 +326,7 @@ pub fn parse_cbl(parser: &mut impl CombatLogParser,
                         map_id: 0,
                         instance_id: 0,
                         map_difficulty: 0,
-                        unit: Unit { is_player: *is_player, unit_id: *unit_id },
+                        unit: Unit { is_player: *is_player, unit_id: *unit_id, is_self_damage: false },
                     }),
                 ));
             }
@@ -398,7 +398,7 @@ pub fn parse_cbl(parser: &mut impl CombatLogParser,
                 }
 
                 if !ignore {
-                    ignore = dmg.victim.unit_id == 0 || dmg.attacker.unit_id == 0 || dmg.victim.unit_id == dmg.attacker.unit_id
+                    ignore = dmg.victim.unit_id == 0 || dmg.attacker.unit_id == 0 || dmg.attacker.is_self_damage || dmg.victim.unit_id == dmg.attacker.unit_id
                 }
 
                 if !ignore {
@@ -451,7 +451,7 @@ pub fn parse_cbl(parser: &mut impl CombatLogParser,
                     if let Some(owner_unit_id) = pom_owner.get(&heal_done.caster.unit_id).cloned() {
                         pom_owner.remove(&heal_done.caster.unit_id);
                         looking_for_new_pom_owner = Some(owner_unit_id);
-                        heal_done.caster = Unit { unit_id: owner_unit_id, is_player: true };
+                        heal_done.caster = Unit { unit_id: owner_unit_id, is_player: true, is_self_damage: false };
                         additional_messages.push(Message::new_parsed(
                             *timestamp - 1,
                             *message_count - 1,
@@ -471,12 +471,12 @@ pub fn parse_cbl(parser: &mut impl CombatLogParser,
                         if aura_app.delta == 1 {
                             if let Some(pom_owner_unit_id) = looking_for_new_pom_owner {
                                 pom_owner.insert(aura_app.target.unit_id, pom_owner_unit_id);
-                                aura_app.caster = Unit { is_player: true, unit_id: pom_owner_unit_id };
+                                aura_app.caster = Unit { is_player: true, unit_id: pom_owner_unit_id, is_self_damage: false };
                                 looking_for_new_pom_owner = None;
                             }
                         } else if aura_app.delta == -1 {
                             if let Some(owner_unit_id) = pom_owner.get(&aura_app.target.unit_id).cloned() {
-                                aura_app.caster = Unit { is_player: true, unit_id: owner_unit_id };
+                                aura_app.caster = Unit { is_player: true, unit_id: owner_unit_id, is_self_damage: false };
                             }
                         }
                     }
@@ -513,7 +513,7 @@ pub fn parse_cbl(parser: &mut impl CombatLogParser,
                                                 map_id: map_id as u32,
                                                 instance_id,
                                                 map_difficulty: difficulty.unwrap_or(0),
-                                                unit: Unit { is_player: false, unit_id },
+                                                unit: Unit { is_player: false, unit_id, is_self_damage: false },
                                             }),
                                         ));
                                     }
@@ -525,7 +525,7 @@ pub fn parse_cbl(parser: &mut impl CombatLogParser,
                                         &mut last_combat_update,
                                         (*timestamp as i64 + delay_ts) as u64,
                                         *message_count - 1,
-                                        &Unit { is_player: false, unit_id },
+                                        &Unit { is_player: false, unit_id, is_self_damage: false },
                                     );
                                 }
                             }
@@ -696,7 +696,7 @@ fn add_combat_event(parser: &impl CombatLogParser, data: &Data, expansion_id: u8
 
                 for npc_id in &implied_in_combat_npc_ids {
                     if unit_id.get_entry().contains(npc_id) {
-                        add_combat_event(parser, data, expansion_id, additional_messages, last_combat_update, current_timestamp, current_message_count, &Unit { is_player: false, unit_id });
+                        add_combat_event(parser, data, expansion_id, additional_messages, last_combat_update, current_timestamp, current_message_count, &Unit { is_player: false, unit_id, is_self_damage: false });
                     }
                 }
             }
@@ -719,7 +719,7 @@ fn add_combat_event(parser: &impl CombatLogParser, data: &Data, expansion_id: u8
                         timestamp: current_timestamp - (current_timestamp - last_update) + 10,
                         message_count: current_message_count,
                         message_type: MessageType::CombatState(CombatState {
-                            unit: Unit { is_player: false, unit_id },
+                            unit: Unit { is_player: false, unit_id, is_self_damage: false },
                             in_combat: false,
                         }),
                     });
@@ -769,5 +769,5 @@ fn find_casting_unit(parser: &impl CombatLogParser, ability_id: u32, last_combat
         .filter(|(unit_id, last_cbt)| unit_id.get_entry().contains(&npc_id) && timestamp - *last_cbt <= 120000)
         .collect::<Vec<(&u64, &u64)>>();
     potential_candidates.sort_by(|left, right| right.1.cmp(left.1));
-    potential_candidates.first().map(|(unit_id, _)| Unit { is_player: false, unit_id: **unit_id })
+    potential_candidates.first().map(|(unit_id, _)| Unit { is_player: false, unit_id: **unit_id, is_self_damage: false })
 }
