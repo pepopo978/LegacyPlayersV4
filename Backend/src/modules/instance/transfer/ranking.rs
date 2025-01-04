@@ -1,42 +1,14 @@
-use std::io::{Cursor, Write};
 use crate::modules::account::guard::IsModerator;
 use crate::modules::armory::Armory;
 use crate::modules::instance::dto::{InstanceFailure, RankingCharacterMeta, RankingResult};
 use crate::modules::instance::tools::{create_ranking_export, UnrankAttempt};
-use crate::modules::instance::Instance;
+use crate::modules::instance::{GzippedResponse, Instance};
 use crate::MainDb;
 use flate2::write::GzEncoder;
 use flate2::Compression;
-use okapi::openapi3::Responses;
-use rocket::response::Responder;
-use rocket::{Response, State};
-use rocket::http::{ContentType, Status};
+use rocket::State;
 use rocket_contrib::json::Json;
-use rocket_okapi::gen::OpenApiGenerator;
-use rocket_okapi::response::OpenApiResponder;
-
-#[derive(Debug)]
-pub struct GzippedResponse(Vec<u8>);
-
-
-impl<'r> Responder<'r> for GzippedResponse {
-    fn respond_to(self, _: &rocket::Request<'_>) -> rocket::response::Result<'r> {
-        let mut response = Response::build();
-        response
-            .header(ContentType::JSON)
-            .raw_header("Content-Encoding", "gzip")
-            .status(Status::Ok)
-            .sized_body(Cursor::new(self.0));
-        response.ok()
-    }
-}
-
-
-impl<'r> OpenApiResponder<'r> for GzippedResponse {
-    fn responses(gen: &mut OpenApiGenerator) -> rocket_okapi::Result<Responses> {
-        <Vec<u8> as OpenApiResponder>::responses(gen)
-    }
-}
+use std::io::Write;
 
 #[openapi]
 #[get("/ranking/dps")]
