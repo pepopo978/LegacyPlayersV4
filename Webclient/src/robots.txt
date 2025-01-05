@@ -1,4 +1,2 @@
 User-agent: *
-Disallow: /assets/
-Disallow: /i18n/
-Sitemap: https://turtlogs.com/sitemap.xml
+Disallow: /
