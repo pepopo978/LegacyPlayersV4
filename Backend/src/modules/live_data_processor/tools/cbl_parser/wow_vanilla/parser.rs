@@ -1494,104 +1494,101 @@ impl CombatLogParser for WoWVanillaParser {
         let mut result = self.participants.iter().filter(|(_, participant)| participant.is_player).fold(Vec::new(), |mut acc, (_, participant)| {
             let hero_class_id = participant.hero_class_id.unwrap_or(12);
 
-            // don't save player characters with hero class 12 (unknown)
-            if !participant.is_player || hero_class_id != 12 {
-                let mut gear = CharacterGearDto {
-                    head: None,
-                    neck: None,
-                    shoulder: None,
-                    back: None,
-                    chest: None,
-                    shirt: None,
-                    tabard: None,
-                    wrist: None,
-                    main_hand: None,
-                    off_hand: None,
-                    ternary_hand: None,
-                    glove: None,
-                    belt: None,
-                    leg: None,
-                    boot: None,
-                    ring1: None,
-                    ring2: None,
-                    trinket1: None,
-                    trinket2: None,
+            let mut gear = CharacterGearDto {
+                head: None,
+                neck: None,
+                shoulder: None,
+                back: None,
+                chest: None,
+                shirt: None,
+                tabard: None,
+                wrist: None,
+                main_hand: None,
+                off_hand: None,
+                ternary_hand: None,
+                glove: None,
+                belt: None,
+                leg: None,
+                boot: None,
+                ring1: None,
+                ring2: None,
+                trinket1: None,
+                trinket2: None,
+            };
+
+            let gear_setups = &participant.gear_setups;
+            if gear_setups.is_some() && !gear_setups.as_ref().unwrap().is_empty() {
+                // only save the first gear setup
+                let gear_setup = gear_setups.as_ref().unwrap().first().unwrap().1.clone();
+
+                gear = CharacterGearDto {
+                    head: create_character_item_dto(&gear_setup[0]),
+                    neck: create_character_item_dto(&gear_setup[1]),
+                    shoulder: create_character_item_dto(&gear_setup[2]),
+                    back: create_character_item_dto(&gear_setup[14]),
+                    chest: create_character_item_dto(&gear_setup[4]),
+                    shirt: create_character_item_dto(&gear_setup[3]),
+                    tabard: create_character_item_dto(&gear_setup[18]),
+                    wrist: create_character_item_dto(&gear_setup[8]),
+                    main_hand: create_character_item_dto(&gear_setup[15]),
+                    off_hand: create_character_item_dto(&gear_setup[16]),
+                    ternary_hand: create_character_item_dto(&gear_setup[17]),
+                    glove: create_character_item_dto(&gear_setup[9]),
+                    belt: create_character_item_dto(&gear_setup[5]),
+                    leg: create_character_item_dto(&gear_setup[6]),
+                    boot: create_character_item_dto(&gear_setup[7]),
+                    ring1: create_character_item_dto(&gear_setup[10]),
+                    ring2: create_character_item_dto(&gear_setup[11]),
+                    trinket1: create_character_item_dto(&gear_setup[12]),
+                    trinket2: create_character_item_dto(&gear_setup[13]),
                 };
+            }
 
-                let gear_setups = &participant.gear_setups;
-                if gear_setups.is_some() && !gear_setups.as_ref().unwrap().is_empty() {
-                    // only save the first gear setup
-                    let gear_setup = gear_setups.as_ref().unwrap().first().unwrap().1.clone();
+            let mut talents = participant.talents.clone();
+            if talents.is_empty() {
+                talents.push((participant.first_seen, None));
+            } else {
+                // copy the first talent entry with the first seen timestamp
+                talents.insert(0, (participant.first_seen, talents[0].1.clone()));
 
-                    gear = CharacterGearDto {
-                        head: create_character_item_dto(&gear_setup[0]),
-                        neck: create_character_item_dto(&gear_setup[1]),
-                        shoulder: create_character_item_dto(&gear_setup[2]),
-                        back: create_character_item_dto(&gear_setup[14]),
-                        chest: create_character_item_dto(&gear_setup[4]),
-                        shirt: create_character_item_dto(&gear_setup[3]),
-                        tabard: create_character_item_dto(&gear_setup[18]),
-                        wrist: create_character_item_dto(&gear_setup[8]),
-                        main_hand: create_character_item_dto(&gear_setup[15]),
-                        off_hand: create_character_item_dto(&gear_setup[16]),
-                        ternary_hand: create_character_item_dto(&gear_setup[17]),
-                        glove: create_character_item_dto(&gear_setup[9]),
-                        belt: create_character_item_dto(&gear_setup[5]),
-                        leg: create_character_item_dto(&gear_setup[6]),
-                        boot: create_character_item_dto(&gear_setup[7]),
-                        ring1: create_character_item_dto(&gear_setup[10]),
-                        ring2: create_character_item_dto(&gear_setup[11]),
-                        trinket1: create_character_item_dto(&gear_setup[12]),
-                        trinket2: create_character_item_dto(&gear_setup[13]),
-                    };
-                }
+                // copy the last talent entry with the last seen timestamp
+                talents.push((participant.last_seen, talents.last().unwrap().1.clone()));
+            }
 
-                let mut talents = participant.talents.clone();
-                if talents.is_empty() {
-                    talents.push((participant.first_seen, None));
-                } else {
-                    // copy the first talent entry with the first seen timestamp
-                    talents.insert(0, (participant.first_seen, talents[0].1.clone()));
-
-                    // copy the last talent entry with the last seen timestamp
-                    talents.push((participant.last_seen, talents.last().unwrap().1.clone()));
-                }
-
-                // loop through talents which is timestamp, talent string
-                for (timestamp, talent) in talents.iter() {
-                    acc.push((
-                        None,
-                        *timestamp,
-                        CharacterDto {
-                            server_uid: participant.id,
-                            character_history: Some(CharacterHistoryDto {
-                                character_info: CharacterInfoDto {
-                                    gear: gear.clone(),
-                                    hero_class_id: participant.hero_class_id.unwrap_or(12),
-                                    level: 60,
-                                    gender: participant.gender_id.unwrap_or(false),
-                                    profession1: None,
-                                    profession2: None,
-                                    talent_specialization: talent.clone(),
-                                    race_id: participant.race_id.unwrap_or(1),
+            // loop through talents which is timestamp, talent string
+            for (timestamp, talent) in talents.iter() {
+                acc.push((
+                    None,
+                    *timestamp,
+                    CharacterDto {
+                        server_uid: participant.id,
+                        character_history: Some(CharacterHistoryDto {
+                            character_info: CharacterInfoDto {
+                                gear: gear.clone(),
+                                hero_class_id: participant.hero_class_id.unwrap_or(12),
+                                level: 60,
+                                gender: participant.gender_id.unwrap_or(false),
+                                profession1: None,
+                                profession2: None,
+                                talent_specialization: talent.clone(),
+                                race_id: participant.race_id.unwrap_or(1),
+                            },
+                            character_name: participant.name.clone(),
+                            character_guild: participant.guild_args.as_ref().map(|(guild_name, rank_name, rank_index)| CharacterGuildDto {
+                                guild: GuildDto {
+                                    server_uid: get_hashed_player_unit_id(guild_name),
+                                    name: guild_name.clone(),
                                 },
-                                character_name: participant.name.clone(),
-                                character_guild: participant.guild_args.as_ref().map(|(guild_name, rank_name, rank_index)| CharacterGuildDto {
-                                    guild: GuildDto {
-                                        server_uid: get_hashed_player_unit_id(guild_name),
-                                        name: guild_name.clone(),
-                                    },
-                                    rank: GuildRank { index: *rank_index, name: rank_name.clone() },
-                                }),
-                                character_title: None,
-                                profession_skill_points1: None,
-                                profession_skill_points2: None,
-                                facial: None,
-                                arena_teams: vec![],
+                                rank: GuildRank { index: *rank_index, name: rank_name.clone() },
                             }),
-                        },
-                    ));
-                }
+                            character_title: None,
+                            profession_skill_points1: None,
+                            profession_skill_points2: None,
+                            facial: None,
+                            arena_teams: vec![],
+                        }),
+                    },
+                ));
             }
             acc
         });
