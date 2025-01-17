@@ -1492,8 +1492,6 @@ impl CombatLogParser for WoWVanillaParser {
 
     fn get_involved_character_builds(&self) -> Vec<(Option<u32>, u64, CharacterDto)> {
         let mut result = self.participants.iter().filter(|(_, participant)| participant.is_player).fold(Vec::new(), |mut acc, (_, participant)| {
-            let hero_class_id = participant.hero_class_id.unwrap_or(12);
-
             let mut gear = CharacterGearDto {
                 head: None,
                 neck: None,
