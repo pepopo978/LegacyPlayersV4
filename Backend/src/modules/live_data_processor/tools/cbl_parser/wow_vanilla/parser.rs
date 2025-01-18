@@ -187,7 +187,7 @@ fn assign_spec_from_cast(caster: Option<&mut Participant>, spell: &str, timestam
         return;
     }
 
-    if spell == "Mortal Strike" || spell == "Sweeping Strikes" || spell == "Slam" {
+    if spell == "Mortal Strike" || spell == "Sweeping Strikes" {
         let p = caster.unwrap();
         p.record_talents(timestamp, WARRIOR_ARMS_SPEC);
     } else if spell == "Bloodthirst" {
