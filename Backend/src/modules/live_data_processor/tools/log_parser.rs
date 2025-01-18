@@ -13,7 +13,7 @@ use crate::modules::live_data_processor::tools::cbl_parser::CombatLogParser;
 use crate::modules::live_data_processor::tools::GUID;
 use crate::util::database::{Execute, Select};
 use crate::modules::live_data_processor::LiveDataProcessor;
-use crate::modules::live_data_processor::tools::cbl_parser::wow_vanilla::hashed_unit_id::{get_hashed_player_unit_id};
+use crate::modules::live_data_processor::tools::cbl_parser::wow_vanilla::hashed_unit_id::{get_hashed_player_unit_id, get_npc_unit_id};
 
 pub fn parse_cbl(parser: &mut impl CombatLogParser,
                  live_data_processor: &LiveDataProcessor,
@@ -38,6 +38,13 @@ pub fn parse_cbl(parser: &mut impl CombatLogParser,
         "Mind Vision",
         "Enlighten",
         "Bloodrage"
+    ];
+
+    let combat_ignore_units = [
+        get_npc_unit_id(data, "Rat").unwrap(),
+        get_npc_unit_id(data, "Maggot").unwrap(),
+        get_npc_unit_id(data, "Larva").unwrap(),
+        get_npc_unit_id(data, "Roach").unwrap(),
     ];
 
     // Pre processing
@@ -80,6 +87,11 @@ pub fn parse_cbl(parser: &mut impl CombatLogParser,
                                         ignore = combat_ignore_spells.contains(&spell_name.as_str());
                                     }
                                 }
+
+                                if !ignore {
+                                    ignore = combat_ignore_units.contains(&dmg.victim.unit_id);
+                                }
+
 
                                 if !ignore {
                                     combat_started_once = true;
@@ -241,7 +253,6 @@ pub fn parse_cbl(parser: &mut impl CombatLogParser,
     let mut recent_spell_casts: VecDeque<(u64, SpellCast)> = VecDeque::new();
 
     let deathknight_understudy_unit_id = get_hashed_player_unit_id("Deathknight Understudy");
-    // let patchwerk_unit_id = get_npc_unit_id(data, "Patchwerk").unwrap();
 
     for Message { timestamp, message_count, message_type, .. } in messages.iter_mut() {
         // Insert Instance Map Messages
@@ -404,6 +415,10 @@ pub fn parse_cbl(parser: &mut impl CombatLogParser,
                     if let Some(spell_name) = dmg.spell_name.as_ref() {
                         ignore = combat_ignore_spells.contains(&spell_name.as_str());
                     }
+                }
+
+                if !ignore {
+                    ignore = combat_ignore_units.contains(&dmg.victim.unit_id);
                 }
 
                 if !ignore {
