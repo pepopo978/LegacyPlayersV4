@@ -34,7 +34,7 @@ impl WoWVanillaParser {
         if let Some(participants) = self.participants.get_mut(&unit.unit_id) {
             participants.add_participation_point(now);
         } else {
-            self.participants.insert(unit.unit_id, Participant::new(unit.unit_id, unit.is_player, name.replace("\"", ""), now));
+            self.participants.insert(unit.unit_id, Participant::new(unit.unit_id, unit.is_player, unit.is_self_damage, unit.is_mind_control, name.replace("\"", ""), now));
         }
     }
 

@@ -23,7 +23,7 @@ fn map_un_aura_positive() {
     assert_eq!(un_aura.un_aura_caster.unit_id, 244);
     assert_eq!(un_aura.target.is_player, true);
     assert_eq!(un_aura.target.unit_id, 245);
-    assert_eq!(un_aura.aura_caster, Some(Unit { is_player: true, unit_id: 246, is_self_damage: false }));
+    assert_eq!(un_aura.aura_caster, Some(Unit { is_player: true, unit_id: 246, is_self_damage: false, is_mind_control: false }));
     assert_eq!(un_aura.un_aura_spell_id, 144);
     assert_eq!(un_aura.target_spell_id, 145);
     assert_eq!(un_aura.un_aura_amount, 2);

@@ -685,7 +685,7 @@ impl CombatLogParser for WoWVanillaParser {
             let spell_name = captures.get(3)?.as_str();
             let spell_id = parse_spell_args(&mut self.cache_spell_id, data, spell_name)?;
             let stack_amount = u8::from_str_radix(captures.get(4)?.as_str(), 10).ok()?;
-            let caster = Unit { is_player: true, unit_id: 0, is_self_damage: false };
+            let caster = Unit { is_player: true, unit_id: 0, is_self_damage: false, is_mind_control: false };
             self.collect_participant(&target, captures.get(1)?.as_str(), event_ts);
             self.collect_active_map(data, &target, event_ts);
 
@@ -715,7 +715,7 @@ impl CombatLogParser for WoWVanillaParser {
         if let Some(captures) = RE_AURA_FADE.captures(&content) {
             let target = parse_unit(&mut self.cache_unit, data, captures.get(2)?.as_str())?;
             let spell_id = parse_spell_args(&mut self.cache_spell_id, data, captures.get(1)?.as_str())?;
-            let caster = Unit { is_player: true, unit_id: 0, is_self_damage: false };
+            let caster = Unit { is_player: true, unit_id: 0, is_self_damage: false, is_mind_control: false };
             self.collect_participant(&target, captures.get(2)?.as_str(), event_ts);
             self.collect_active_map(data, &target, event_ts);
 
@@ -1211,7 +1211,7 @@ impl CombatLogParser for WoWVanillaParser {
                             map_id: map.id as u32,
                             instance_id,
                             map_difficulty: 0,
-                            unit: Unit { is_player: false, unit_id: 1, is_self_damage: false },
+                            unit: Unit { is_player: false, unit_id: 1, is_self_damage: false, is_mind_control: false },
                         }),
                     ));
                 }
@@ -1250,7 +1250,7 @@ impl CombatLogParser for WoWVanillaParser {
             let guild_rank_index = message_args[8];
 
             let unit_id = get_hashed_player_unit_id(player_name);
-            let participant = self.participants.entry(unit_id).or_insert_with(|| Participant::new(unit_id, true, player_name.to_string(), event_ts));
+            let participant = self.participants.entry(unit_id).or_insert_with(|| Participant::new(unit_id, true, false, false, player_name.to_string(), event_ts));
             if participant.hero_class_id.is_none() {
                 participant.hero_class_id = Some(match hero_class_local.as_str() {
                     "warrior" => 1,
@@ -1338,7 +1338,7 @@ impl CombatLogParser for WoWVanillaParser {
          * Dispel, Steal and Interrupt
          */
         if let Some(captures) = RE_AURA_DISPEL.captures(&content) {
-            let un_aura_caster = Unit { is_player: true, unit_id: 0, is_self_damage: false };
+            let un_aura_caster = Unit { is_player: true, unit_id: 0, is_self_damage: false, is_mind_control: false };
             let un_aura_spell_id = 42;
             let target = parse_unit(&mut self.cache_unit, data, captures.get(1)?.as_str())?;
             let target_spell_id = parse_spell_args(&mut self.cache_spell_id, data, captures.get(2)?.as_str())?;
@@ -1419,11 +1419,12 @@ impl CombatLogParser for WoWVanillaParser {
                 0,
                 0,
                 MessageType::Summon(Summon {
-                    owner: Unit { is_player: true, unit_id: *owner_unit_id, is_self_damage: false },
+                    owner: Unit { is_player: true, unit_id: *owner_unit_id, is_self_damage: false, is_mind_control: false },
                     unit: Unit {
                         is_player: false,
                         unit_id: 0xF14000FFFF000000 + (*pet_unit_id & 0x0000000000FFFFFF),
                         is_self_damage: false,
+                        is_mind_control: false,
                     },
                 }),
             ));
@@ -1492,101 +1493,106 @@ impl CombatLogParser for WoWVanillaParser {
 
     fn get_involved_character_builds(&self) -> Vec<(Option<u32>, u64, CharacterDto)> {
         let mut result = self.participants.iter().filter(|(_, participant)| participant.is_player).fold(Vec::new(), |mut acc, (_, participant)| {
-            let mut gear = CharacterGearDto {
-                head: None,
-                neck: None,
-                shoulder: None,
-                back: None,
-                chest: None,
-                shirt: None,
-                tabard: None,
-                wrist: None,
-                main_hand: None,
-                off_hand: None,
-                ternary_hand: None,
-                glove: None,
-                belt: None,
-                leg: None,
-                boot: None,
-                ring1: None,
-                ring2: None,
-                trinket1: None,
-                trinket2: None,
-            };
+            let hero_class_id = participant.hero_class_id.unwrap_or(12);
 
-            let gear_setups = &participant.gear_setups;
-            if gear_setups.is_some() && !gear_setups.as_ref().unwrap().is_empty() {
-                // only save the first gear setup
-                let gear_setup = gear_setups.as_ref().unwrap().first().unwrap().1.clone();
-
-                gear = CharacterGearDto {
-                    head: create_character_item_dto(&gear_setup[0]),
-                    neck: create_character_item_dto(&gear_setup[1]),
-                    shoulder: create_character_item_dto(&gear_setup[2]),
-                    back: create_character_item_dto(&gear_setup[14]),
-                    chest: create_character_item_dto(&gear_setup[4]),
-                    shirt: create_character_item_dto(&gear_setup[3]),
-                    tabard: create_character_item_dto(&gear_setup[18]),
-                    wrist: create_character_item_dto(&gear_setup[8]),
-                    main_hand: create_character_item_dto(&gear_setup[15]),
-                    off_hand: create_character_item_dto(&gear_setup[16]),
-                    ternary_hand: create_character_item_dto(&gear_setup[17]),
-                    glove: create_character_item_dto(&gear_setup[9]),
-                    belt: create_character_item_dto(&gear_setup[5]),
-                    leg: create_character_item_dto(&gear_setup[6]),
-                    boot: create_character_item_dto(&gear_setup[7]),
-                    ring1: create_character_item_dto(&gear_setup[10]),
-                    ring2: create_character_item_dto(&gear_setup[11]),
-                    trinket1: create_character_item_dto(&gear_setup[12]),
-                    trinket2: create_character_item_dto(&gear_setup[13]),
+            // don't save player characters with hero class 12 (unknown)
+            if !participant.is_player || hero_class_id != 12 || participant.is_mind_control || participant.is_self_damage {
+                let mut gear = CharacterGearDto {
+                    head: None,
+                    neck: None,
+                    shoulder: None,
+                    back: None,
+                    chest: None,
+                    shirt: None,
+                    tabard: None,
+                    wrist: None,
+                    main_hand: None,
+                    off_hand: None,
+                    ternary_hand: None,
+                    glove: None,
+                    belt: None,
+                    leg: None,
+                    boot: None,
+                    ring1: None,
+                    ring2: None,
+                    trinket1: None,
+                    trinket2: None,
                 };
-            }
 
-            let mut talents = participant.talents.clone();
-            if talents.is_empty() {
-                talents.push((participant.first_seen, None));
-            } else {
-                // copy the first talent entry with the first seen timestamp
-                talents.insert(0, (participant.first_seen, talents[0].1.clone()));
+                let gear_setups = &participant.gear_setups;
+                if gear_setups.is_some() && !gear_setups.as_ref().unwrap().is_empty() {
+                    // only save the first gear setup
+                    let gear_setup = gear_setups.as_ref().unwrap().first().unwrap().1.clone();
 
-                // copy the last talent entry with the last seen timestamp
-                talents.push((participant.last_seen, talents.last().unwrap().1.clone()));
-            }
+                    gear = CharacterGearDto {
+                        head: create_character_item_dto(&gear_setup[0]),
+                        neck: create_character_item_dto(&gear_setup[1]),
+                        shoulder: create_character_item_dto(&gear_setup[2]),
+                        back: create_character_item_dto(&gear_setup[14]),
+                        chest: create_character_item_dto(&gear_setup[4]),
+                        shirt: create_character_item_dto(&gear_setup[3]),
+                        tabard: create_character_item_dto(&gear_setup[18]),
+                        wrist: create_character_item_dto(&gear_setup[8]),
+                        main_hand: create_character_item_dto(&gear_setup[15]),
+                        off_hand: create_character_item_dto(&gear_setup[16]),
+                        ternary_hand: create_character_item_dto(&gear_setup[17]),
+                        glove: create_character_item_dto(&gear_setup[9]),
+                        belt: create_character_item_dto(&gear_setup[5]),
+                        leg: create_character_item_dto(&gear_setup[6]),
+                        boot: create_character_item_dto(&gear_setup[7]),
+                        ring1: create_character_item_dto(&gear_setup[10]),
+                        ring2: create_character_item_dto(&gear_setup[11]),
+                        trinket1: create_character_item_dto(&gear_setup[12]),
+                        trinket2: create_character_item_dto(&gear_setup[13]),
+                    };
+                }
 
-            // loop through talents which is timestamp, talent string
-            for (timestamp, talent) in talents.iter() {
-                acc.push((
-                    None,
-                    *timestamp,
-                    CharacterDto {
-                        server_uid: participant.id,
-                        character_history: Some(CharacterHistoryDto {
-                            character_info: CharacterInfoDto {
-                                gear: gear.clone(),
-                                hero_class_id: participant.hero_class_id.unwrap_or(12),
-                                level: 60,
-                                gender: participant.gender_id.unwrap_or(false),
-                                profession1: None,
-                                profession2: None,
-                                talent_specialization: talent.clone(),
-                                race_id: participant.race_id.unwrap_or(1),
-                            },
-                            character_name: participant.name.clone(),
-                            character_guild: participant.guild_args.as_ref().map(|(guild_name, rank_name, rank_index)| CharacterGuildDto {
-                                guild: GuildDto {
-                                    server_uid: get_hashed_player_unit_id(guild_name),
-                                    name: guild_name.clone(),
+                let mut talents = participant.talents.clone();
+                if talents.is_empty() {
+                    talents.push((participant.first_seen, None));
+                } else {
+                    // copy the first talent entry with the first seen timestamp
+                    talents.insert(0, (participant.first_seen, talents[0].1.clone()));
+
+                    // copy the last talent entry with the last seen timestamp
+                    talents.push((participant.last_seen, talents.last().unwrap().1.clone()));
+                }
+
+                // loop through talents which is timestamp, talent string
+                for (timestamp, talent) in talents.iter() {
+                    acc.push((
+                        None,
+                        *timestamp,
+                        CharacterDto {
+                            server_uid: participant.id,
+                            character_history: Some(CharacterHistoryDto {
+                                character_info: CharacterInfoDto {
+                                    gear: gear.clone(),
+                                    hero_class_id: participant.hero_class_id.unwrap_or(12),
+                                    level: 60,
+                                    gender: participant.gender_id.unwrap_or(false),
+                                    profession1: None,
+                                    profession2: None,
+                                    talent_specialization: talent.clone(),
+                                    race_id: participant.race_id.unwrap_or(1),
                                 },
-                                rank: GuildRank { index: *rank_index, name: rank_name.clone() },
+                                character_name: participant.name.clone(),
+                                character_guild: participant.guild_args.as_ref().map(|(guild_name, rank_name, rank_index)| CharacterGuildDto {
+                                    guild: GuildDto {
+                                        server_uid: get_hashed_player_unit_id(guild_name),
+                                        name: guild_name.clone(),
+                                    },
+                                    rank: GuildRank { index: *rank_index, name: rank_name.clone() },
+                                }),
+                                character_title: None,
+                                profession_skill_points1: None,
+                                profession_skill_points2: None,
+                                facial: None,
+                                arena_teams: vec![],
                             }),
-                            character_title: None,
-                            profession_skill_points1: None,
-                            profession_skill_points2: None,
-                            facial: None,
-                            arena_teams: vec![],
-                        }),
-                    },
-                ));
+                        },
+                    ));
+                }
             }
             acc
         });

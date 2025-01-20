@@ -224,8 +224,8 @@ pub fn parse_cbl(parser: &mut impl CombatLogParser,
     let mut player_participants_by_interval = IntervalBucket::new(msg_start as i64, msg_end as i64, 300000);
 
     let mut parsed_participants = parser.get_participants();
-    let incombat_participant_helper = Participant::new(0xF13000FFFE000000, false, "CBT Helper".to_string(), 10000);
-    let unknown_participant = Participant::new(0, true, "Unknown".to_string(), 10000);
+    let incombat_participant_helper = Participant::new(0xF13000FFFE000000, false, false, false, "CBT Helper".to_string(), 10000);
+    let unknown_participant = Participant::new(0, true, false, false, "Unknown".to_string(), 10000);
     participants_by_interval.insert(msg_start as i64, msg_end as i64, incombat_participant_helper.clone());
     participants_by_interval.insert(msg_start as i64, msg_end as i64, unknown_participant.clone());
     player_participants_by_interval.insert(msg_start as i64, msg_end as i64, unknown_participant.clone());
@@ -267,7 +267,7 @@ pub fn parse_cbl(parser: &mut impl CombatLogParser,
                             timestamp: *last_cbt_state + 5,
                             message_count: *message_count,
                             message_type: MessageType::CombatState(CombatState {
-                                unit: Unit { is_player: *is_player, unit_id: *unit_id, is_self_damage: false },
+                                unit: Unit { is_player: *is_player, unit_id: *unit_id, is_self_damage: false, is_mind_control: false },
                                 in_combat: false,
                             }),
                         });
@@ -306,7 +306,7 @@ pub fn parse_cbl(parser: &mut impl CombatLogParser,
                         map_id: map_id as u32,
                         instance_id,
                         map_difficulty: difficulty.unwrap_or(0),
-                        unit: Unit { is_player, unit_id, is_self_damage: false },
+                        unit: Unit { is_player, unit_id, is_self_damage: false, is_mind_control: false },
                     }),
                 ));
                 participants.insert(unit_id, is_player);
@@ -320,7 +320,7 @@ pub fn parse_cbl(parser: &mut impl CombatLogParser,
                         timestamp: *last_cbt_state + 5,
                         message_count: *message_count,
                         message_type: MessageType::CombatState(CombatState {
-                            unit: Unit { is_player: *is_player, unit_id: *unit_id, is_self_damage: false },
+                            unit: Unit { is_player: *is_player, unit_id: *unit_id, is_self_damage: false, is_mind_control: false },
                             in_combat: false,
                         }),
                     });
@@ -336,7 +336,7 @@ pub fn parse_cbl(parser: &mut impl CombatLogParser,
                         map_id: 0,
                         instance_id: 0,
                         map_difficulty: 0,
-                        unit: Unit { is_player: *is_player, unit_id: *unit_id, is_self_damage: false },
+                        unit: Unit { is_player: *is_player, unit_id: *unit_id, is_self_damage: false, is_mind_control: false },
                     }),
                 ));
             }
@@ -465,7 +465,7 @@ pub fn parse_cbl(parser: &mut impl CombatLogParser,
                     if let Some(owner_unit_id) = pom_owner.get(&heal_done.caster.unit_id).cloned() {
                         pom_owner.remove(&heal_done.caster.unit_id);
                         looking_for_new_pom_owner = Some(owner_unit_id);
-                        heal_done.caster = Unit { unit_id: owner_unit_id, is_player: true, is_self_damage: false };
+                        heal_done.caster = Unit { unit_id: owner_unit_id, is_player: true, is_self_damage: false, is_mind_control: false };
                         additional_messages.push(Message::new_parsed(
                             *timestamp - 1,
                             *message_count - 1,
@@ -485,12 +485,12 @@ pub fn parse_cbl(parser: &mut impl CombatLogParser,
                         if aura_app.delta == 1 {
                             if let Some(pom_owner_unit_id) = looking_for_new_pom_owner {
                                 pom_owner.insert(aura_app.target.unit_id, pom_owner_unit_id);
-                                aura_app.caster = Unit { is_player: true, unit_id: pom_owner_unit_id, is_self_damage: false };
+                                aura_app.caster = Unit { is_player: true, unit_id: pom_owner_unit_id, is_self_damage: false, is_mind_control: false };
                                 looking_for_new_pom_owner = None;
                             }
                         } else if aura_app.delta == -1 {
                             if let Some(owner_unit_id) = pom_owner.get(&aura_app.target.unit_id).cloned() {
-                                aura_app.caster = Unit { is_player: true, unit_id: owner_unit_id, is_self_damage: false };
+                                aura_app.caster = Unit { is_player: true, unit_id: owner_unit_id, is_self_damage: false, is_mind_control: false };
                             }
                         }
                     }
@@ -527,7 +527,7 @@ pub fn parse_cbl(parser: &mut impl CombatLogParser,
                                                 map_id: map_id as u32,
                                                 instance_id,
                                                 map_difficulty: difficulty.unwrap_or(0),
-                                                unit: Unit { is_player: false, unit_id, is_self_damage: false },
+                                                unit: Unit { is_player: false, unit_id, is_self_damage: false, is_mind_control: false },
                                             }),
                                         ));
                                     }
@@ -539,7 +539,7 @@ pub fn parse_cbl(parser: &mut impl CombatLogParser,
                                         &mut last_combat_update,
                                         (*timestamp as i64 + delay_ts) as u64,
                                         *message_count - 1,
-                                        &Unit { is_player: false, unit_id, is_self_damage: false },
+                                        &Unit { is_player: false, unit_id, is_self_damage: false, is_mind_control: false },
                                     );
                                 }
                             }
@@ -710,7 +710,7 @@ fn add_combat_event(parser: &impl CombatLogParser, data: &Data, expansion_id: u8
 
                 for npc_id in &implied_in_combat_npc_ids {
                     if unit_id.get_entry().contains(npc_id) {
-                        add_combat_event(parser, data, expansion_id, additional_messages, last_combat_update, current_timestamp, current_message_count, &Unit { is_player: false, unit_id, is_self_damage: false });
+                        add_combat_event(parser, data, expansion_id, additional_messages, last_combat_update, current_timestamp, current_message_count, &Unit { is_player: false, unit_id, is_self_damage: false, is_mind_control: false });
                     }
                 }
             }
@@ -733,7 +733,7 @@ fn add_combat_event(parser: &impl CombatLogParser, data: &Data, expansion_id: u8
                         timestamp: current_timestamp - (current_timestamp - last_update) + 10,
                         message_count: current_message_count,
                         message_type: MessageType::CombatState(CombatState {
-                            unit: Unit { is_player: false, unit_id, is_self_damage: false },
+                            unit: Unit { is_player: false, unit_id, is_self_damage: false, is_mind_control: false },
                             in_combat: false,
                         }),
                     });
@@ -783,5 +783,5 @@ fn find_casting_unit(parser: &impl CombatLogParser, ability_id: u32, last_combat
         .filter(|(unit_id, last_cbt)| unit_id.get_entry().contains(&npc_id) && timestamp - *last_cbt <= 120000)
         .collect::<Vec<(&u64, &u64)>>();
     potential_candidates.sort_by(|left, right| right.1.cmp(left.1));
-    potential_candidates.first().map(|(unit_id, _)| Unit { is_player: false, unit_id: **unit_id, is_self_damage: false })
+    potential_candidates.first().map(|(unit_id, _)| Unit { is_player: false, unit_id: **unit_id, is_self_damage: false, is_mind_control: false })
 }

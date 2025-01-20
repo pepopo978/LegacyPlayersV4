@@ -15,16 +15,20 @@ pub fn parse_unit(cache: &mut HashMap<String, Unit>, data: &Data, unit_name: &st
 
     let unit;
     if let Some(unit_id) = get_npc_unit_id(data, &unit_name) {
-        unit = Unit { is_player: false, unit_id, is_self_damage: unit_name.contains("self damage") };
+        let self_damage = unit_name.contains("self damage");
+
+        unit = Unit { is_player: false, unit_id, is_self_damage: self_damage, is_mind_control:false };
     } else {
         // This indicates that something went terribly wrong during parsing
         if unit_name.contains("'s ") {
             return None;
         }
+        let self_damage = unit_name.contains("self damage");
         unit = Unit {
             is_player: true,
             unit_id: get_hashed_player_unit_id(unit_name.as_str()),
-            is_self_damage: unit_name.contains("self damage")
+            is_self_damage: self_damage,
+            is_mind_control: !self_damage && unit_name.contains("(") && unit_name.contains(")"),
         }
     }
     cache.insert(unit_name, unit.clone());

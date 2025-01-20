@@ -6,6 +6,8 @@ use crate::modules::live_data_processor::material::interval_bucket::UniqueBucket
 pub struct Participant {
     pub id: u64,
     pub is_player: bool,
+    pub is_self_damage: bool,
+    pub is_mind_control: bool,
     pub name: String,
     pub hero_class_id: Option<u8>,
     pub gender_id: Option<bool>,
@@ -25,10 +27,12 @@ pub struct Participant {
 }
 
 impl Participant {
-    pub fn new(id: u64, is_player: bool, name: String, last_seen: u64) -> Self {
+    pub fn new(id: u64, is_player: bool, is_self_damage: bool, is_mind_control: bool, name: String, last_seen: u64) -> Self {
         Participant {
             id,
             is_player,
+            is_self_damage,
+            is_mind_control,
             hero_class_id: None,
             gender_id: None,
             race_id: None,
