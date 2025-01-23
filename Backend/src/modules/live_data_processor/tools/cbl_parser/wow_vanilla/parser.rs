@@ -446,21 +446,32 @@ impl CombatLogParser for WoWVanillaParser {
                 "Holy" => School::Holy,
                 _ => unreachable!(),
             };
-            let attacker = parse_unit(&mut self.cache_unit, data, captures.get(4)?.as_str())?;
 
             let spell_name = captures.get(5)?.as_str();
             let spell_id = parse_spell_args(&mut self.cache_spell_id, data, spell_name)?;
+
+            let mut attacker_capture = captures.get(4)?.as_str().to_string();
+
+            if spell_name == "Power Overwhelming" && !attacker_capture.contains("self damage") {
+                // assign demo spec to the original attacker
+                let original_attacker = parse_unit(&mut self.cache_unit, data, attacker_capture.as_str())?;
+                assign_spec_from_cast(self.participants.get_mut(&original_attacker.unit_id), spell_name, event_ts);
+
+                // append (self damage) to the attacker name
+                attacker_capture = format!("{} (self damage)", attacker_capture);
+            }
+
+            let attacker = parse_unit(&mut self.cache_unit, data, attacker_capture.as_str())?;
+            assign_spec_from_cast(self.participants.get_mut(&attacker.unit_id), spell_name, event_ts);
 
             let mut hit_mask = HitType::Hit as u32;
             let trailer = parse_trailer(captures.get(6)?.as_str());
             trailer.iter().for_each(|(_, hit_type)| hit_mask |= hit_type.clone() as u32);
             self.collect_participant(&victim, captures.get(1)?.as_str(), event_ts);
-            self.collect_participant(&attacker, captures.get(4)?.as_str(), event_ts);
+            self.collect_participant(&attacker, attacker_capture.as_str(), event_ts);
             self.collect_active_map(data, &attacker, event_ts);
             self.collect_active_map(data, &victim, event_ts);
             self.participants.get_mut(&victim.unit_id).unwrap().attribute_damage(damage);
-
-            assign_spec_from_cast(self.participants.get_mut(&attacker.unit_id), spell_name, event_ts);
 
             return Some(vec![
                 MessageType::SpellCast(SpellCast {
