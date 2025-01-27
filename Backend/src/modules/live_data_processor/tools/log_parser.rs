@@ -45,6 +45,7 @@ pub fn parse_cbl(parser: &mut impl CombatLogParser,
         get_npc_unit_id(data, "Maggot").unwrap(),
         get_npc_unit_id(data, "Larva").unwrap(),
         get_npc_unit_id(data, "Roach").unwrap(),
+        get_npc_unit_id(data, "Mr. Bigglesworth").unwrap(),
     ];
 
     // Pre processing
@@ -94,6 +95,7 @@ pub fn parse_cbl(parser: &mut impl CombatLogParser,
 
 
                                 if !ignore {
+                                    println!("First combat started by {}", dmg.attacker.unit_id);
                                     combat_started_once = true;
                                 }
                             }
