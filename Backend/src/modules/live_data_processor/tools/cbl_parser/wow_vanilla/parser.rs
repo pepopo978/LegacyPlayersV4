@@ -165,9 +165,6 @@ fn assign_spec_from_aura_gain(receiver: Option<&mut Participant>, spell: &str, t
     } else if spell == "Adrenaline Rush" {
         let p = receiver.unwrap();
         p.record_talents(timestamp, ROGUE_COMBAT_SPEC);
-    } else if spell == "Preparation" {
-        let p = receiver.unwrap();
-        p.record_talents(timestamp, ROGUE_SUBTLETY_SPEC);
     }
 }
 
@@ -226,6 +223,9 @@ fn assign_spec_from_cast(caster: Option<&mut Participant>, spell: &str, timestam
     } else if spell == "Conflagrate" {
         let p = caster.unwrap();
         p.record_talents(timestamp, WARLOCK_DESTRUCTION_SPEC);
+    } else if spell == "Mark for Death" {
+        let p = caster.unwrap();
+        p.record_talents(timestamp, ROGUE_SUBTLETY_SPEC);
     }
 }
 
