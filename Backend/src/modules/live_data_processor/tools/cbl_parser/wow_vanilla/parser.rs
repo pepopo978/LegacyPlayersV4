@@ -759,6 +759,8 @@ impl CombatLogParser for WoWVanillaParser {
                 attacker_capture = format!("{} (self damage)", attacker_capture);
             }
 
+            let attacker = parse_unit(&mut self.cache_unit, data, attacker_capture.as_str())?;
+
             let mut hit_mask = HitType::Hit as u32;
             let trailer = parse_trailer(captures.get(5)?.as_str());
             trailer.iter().for_each(|(_, hit_type)| hit_mask |= hit_type.clone() as u32);
