@@ -452,7 +452,7 @@ impl CombatLogParser for WoWVanillaParser {
 
             let mut attacker_capture = captures.get(4)?.as_str().to_string();
 
-            if (spell_name == "Power Overwhelming" || spell_name == "Soul Link") && !attacker_capture.contains("self damage") {
+            if (spell_name == "Power Overwhelming") && !attacker_capture.contains("self damage") {
                 // assign demo spec to the original attacker
                 let original_attacker = parse_unit(&mut self.cache_unit, data, attacker_capture.as_str())?;
                 assign_spec_from_cast(self.participants.get_mut(&original_attacker.unit_id), spell_name, event_ts);
@@ -743,11 +743,21 @@ impl CombatLogParser for WoWVanillaParser {
          * Spell damage continued
          */
         if let Some(captures) = RE_DAMAGE_SPELL_SPLIT.captures(&content) {
-            let attacker = parse_unit(&mut self.cache_unit, data, captures.get(1)?.as_str())?;
             let spell_name = captures.get(2)?.as_str();
             let spell_id = parse_spell_args(&mut self.cache_spell_id, data, spell_name)?;
             let victim = parse_unit(&mut self.cache_unit, data, captures.get(3)?.as_str())?;
             let damage = u32::from_str_radix(captures.get(4)?.as_str(), 10).ok()?;
+
+            let mut attacker_capture = captures.get(1)?.as_str().to_string();
+
+            if (spell_name == "Soul Link") && !attacker_capture.contains("self damage") {
+                // assign demo spec to the original attacker
+                let original_attacker = parse_unit(&mut self.cache_unit, data, attacker_capture.as_str())?;
+                assign_spec_from_cast(self.participants.get_mut(&original_attacker.unit_id), spell_name, event_ts);
+
+                // append (self damage) to the attacker name
+                attacker_capture = format!("{} (self damage)", attacker_capture);
+            }
 
             let mut hit_mask = HitType::Hit as u32;
             let trailer = parse_trailer(captures.get(5)?.as_str());
