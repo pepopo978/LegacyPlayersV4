@@ -452,7 +452,7 @@ impl CombatLogParser for WoWVanillaParser {
 
             let mut attacker_capture = captures.get(4)?.as_str().to_string();
 
-            if spell_name == "Power Overwhelming" && !attacker_capture.contains("self damage") {
+            if (spell_name == "Power Overwhelming" || spell_name == "Soul Link") && !attacker_capture.contains("self damage") {
                 // assign demo spec to the original attacker
                 let original_attacker = parse_unit(&mut self.cache_unit, data, attacker_capture.as_str())?;
                 assign_spec_from_cast(self.participants.get_mut(&original_attacker.unit_id), spell_name, event_ts);
