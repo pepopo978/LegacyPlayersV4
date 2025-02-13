@@ -84,6 +84,11 @@ pub fn parse_cbl(parser: &mut impl CombatLogParser,
                                 let mut ignore = dmg.victim.unit_id == 0 || dmg.attacker.unit_id == 0 || dmg.attacker.is_self_damage || dmg.victim.unit_id == dmg.attacker.unit_id;
 
                                 if !ignore {
+                                    // ignore dmg against immune enemy
+                                    ignore = dmg.hit_mask & 0x00002000 != 0;
+                                }
+
+                                if !ignore {
                                     if let Some(spell_name) = dmg.spell_name.as_ref() {
                                         ignore = combat_ignore_spells.contains(&spell_name.as_str());
                                     }
@@ -411,6 +416,11 @@ pub fn parse_cbl(parser: &mut impl CombatLogParser,
 
                 if !ignore {
                     ignore = dmg.victim.unit_id == 0 || dmg.attacker.unit_id == 0 || dmg.attacker.is_self_damage || dmg.victim.unit_id == dmg.attacker.unit_id
+                }
+
+                if !ignore {
+                    // ignore dmg against immune enemy
+                    ignore = dmg.hit_mask & 0x00002000 != 0;
                 }
 
                 if !ignore {
