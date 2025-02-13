@@ -45,6 +45,7 @@ pub fn parse_cbl(parser: &mut impl CombatLogParser,
         get_npc_unit_id(data, "Maggot").unwrap(),
         get_npc_unit_id(data, "Larva").unwrap(),
         get_npc_unit_id(data, "Roach").unwrap(),
+        get_npc_unit_id(data, "Spider").unwrap(), // critter
         get_npc_unit_id(data, "Mr. Bigglesworth").unwrap(),
     ];
 
