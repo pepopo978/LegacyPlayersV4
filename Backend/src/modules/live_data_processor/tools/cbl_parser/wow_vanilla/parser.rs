@@ -266,9 +266,9 @@ impl CombatLogParser for WoWVanillaParser {
             static ref RE_AURA_DISPEL: Regex = Regex::new(r"(.+[^\s])\s's (.+[^\s]) is removed\.").unwrap();
             static ref RE_AURA_INTERRUPT: Regex = Regex::new(r"(.+[^\s]) interrupts (.+[^\s])\s's (.+[^\s])\.").unwrap();
 
-            static ref RE_SPELL_CAST_PERFORM_DURABILITY: Regex = Regex::new(r"(.+[^\s]) (casts|performs) (.+[^\s]) on (.+[^\s]): (.+)\.").unwrap();
-            static ref RE_SPELL_CAST_PERFORM: Regex = Regex::new(r"(.+[^\s]) (casts|performs) (.+[^\s]) on (.+[^\s])\.").unwrap();
-            static ref RE_SPELL_CAST_PERFORM_UNKNOWN: Regex = Regex::new(r"(.+[^\s]) (casts|performs) (.+[^\s])\.").unwrap();
+            static ref RE_SPELL_CAST_PERFORM_DURABILITY: Regex = Regex::new(r"(.+[^\s]) (casts|performs|uses) (.+[^\s]) on (.+[^\s]): (.+)\.").unwrap();
+            static ref RE_SPELL_CAST_PERFORM: Regex = Regex::new(r"(.+[^\s]) (casts|performs|uses) (.+[^\s]) on (.+[^\s])\.").unwrap();
+            static ref RE_SPELL_CAST_PERFORM_UNKNOWN: Regex = Regex::new(r"(.+[^\s]) (casts|performs|uses) (.+[^\s])\.").unwrap();
 
             static ref RE_UNIT_DIE_DESTROYED: Regex = Regex::new(r"(.+[^\s]) (dies|is destroyed)\.").unwrap();
             static ref RE_UNIT_SLAY: Regex = Regex::new(r"(.+[^\s]) is slain by (.+[^\s])(!|\.)").unwrap();
