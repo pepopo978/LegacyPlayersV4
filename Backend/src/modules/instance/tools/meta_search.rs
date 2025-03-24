@@ -25,7 +25,7 @@ impl MetaSearch for Instance {
     fn search_meta_raids(&self, db_main: &mut impl Select, armory: &Armory, data: &Data, current_user: Option<u32>, mut filter: RaidSearchFilter) -> SearchResult<MetaRaidSearch> {
         filter.guild.convert_to_lowercase();
         let mut result = self
-            .export_meta(0)
+            .instance_metas.read().unwrap().1.values().collect::<Vec<&InstanceMeta>>()
             .into_iter()
             .filter(|raid| raid.privacy_type == PrivacyType::Public)
             .filter(|raid| filter.map_id.apply_filter(raid.map_id))
@@ -34,18 +34,18 @@ impl MetaSearch for Instance {
             .filter(|raid| filter.end_ts.apply_filter_ts(raid.end_ts))
             .filter_map(|raid| {
                 if let InstanceMeta {
-                    instance_specific: MetaType::Raid { map_difficulty },
+                    instance_specific: MetaType::Raid { map_difficulty, .. },
                     ..
                 } = raid
                 {
-                    if filter.map_difficulty.apply_filter(map_difficulty) {
+                    if filter.map_difficulty.apply_filter(*map_difficulty) {
                         let guild = raid.participants.find_instance_guild(db_main, armory, raid.start_ts)
                             .map(|guild| SearchGuildDto { guild_id: guild.id, name: guild.name });
                         if filter.guild.apply_filter(guild.as_ref().map(|guild| guild.name.clone())) {
                             return Some(MetaRaidSearch {
                                 instance_meta_id: raid.instance_meta_id,
                                 map_id: raid.map_id,
-                                map_difficulty,
+                                map_difficulty: *map_difficulty,
                                 map_icon: data.get_map(raid.map_id).map(|map| map.icon).unwrap(),
                                 guild,
                                 server_id: raid.server_id,
@@ -83,7 +83,7 @@ impl MetaSearch for Instance {
     fn search_meta_raids_by_member(&self, db_main: &mut impl Select, armory: &Armory, data: &Data, current_user: Option<u32>, mut filter: RaidSearchFilter) -> SearchResult<MetaRaidSearch> {
         filter.guild.convert_to_lowercase();
         let mut result = self
-            .export_meta(0)
+            .instance_metas.read().unwrap().1.values().collect::<Vec<&InstanceMeta>>()
             .into_iter()
             .filter(|raid| filter.map_id.apply_filter(raid.map_id))
             .filter(|raid| filter.start_ts.apply_filter_ts(raid.start_ts))
@@ -92,24 +92,29 @@ impl MetaSearch for Instance {
             .filter(|raid| filter.privacy.apply_filter(raid.privacy_type.to_u8()))
             .filter_map(|raid| {
                 if let InstanceMeta {
-                    instance_specific: MetaType::Raid { map_difficulty },
+                    instance_specific: MetaType::Raid { map_difficulty, .. },
                     ..
                 } = raid
                 {
-                    let guild = raid.participants.find_instance_guild(db_main, armory, raid.start_ts).map(|guild| SearchGuildDto { guild_id: guild.id, name: guild.name });
-                    return Some(MetaRaidSearch {
-                        instance_meta_id: raid.instance_meta_id,
-                        map_id: raid.map_id,
-                        map_difficulty,
-                        map_icon: data.get_map(raid.map_id).map(|map| map.icon).unwrap(),
-                        guild,
-                        server_id: raid.server_id,
-                        start_ts: raid.start_ts,
-                        end_ts: raid.end_ts,
-                        can_delete: true,
-                        privacy_type: raid.privacy_type.to_u8(),
-                        privacy_ref: raid.privacy_type.get_group()
-                    });
+                    if filter.map_difficulty.apply_filter(*map_difficulty) {
+                        let guild = raid.participants.find_instance_guild(db_main, armory, raid.start_ts)
+                            .map(|guild| SearchGuildDto { guild_id: guild.id, name: guild.name });
+                        if filter.guild.apply_filter(guild.as_ref().map(|guild| guild.name.clone())) {
+                            return Some(MetaRaidSearch {
+                                instance_meta_id: raid.instance_meta_id,
+                                map_id: raid.map_id,
+                                map_difficulty: *map_difficulty,
+                                map_icon: data.get_map(raid.map_id).map(|map| map.icon).unwrap(),
+                                guild,
+                                server_id: raid.server_id,
+                                start_ts: raid.start_ts,
+                                end_ts: raid.end_ts,
+                                can_delete: current_user.contains(&raid.uploaded_user),
+                                privacy_type: raid.privacy_type.to_u8(),
+                                privacy_ref: raid.privacy_type.get_group()
+                            });
+                        }
+                    }
                 }
                 None
             })
@@ -134,7 +139,7 @@ impl MetaSearch for Instance {
     fn search_meta_raids_by_character(&self, db_main: &mut impl Select, armory: &Armory, data: &Data, character_id: u32, mut filter: RaidSearchFilter) -> SearchResult<MetaRaidSearch> {
         filter.guild.convert_to_lowercase();
         let mut result = self
-            .export_meta(0)
+            .instance_metas.read().unwrap().1.values().collect::<Vec<&InstanceMeta>>()
             .into_iter()
             .filter(|raid| raid.privacy_type == PrivacyType::Public)
             .filter(|raid| filter.map_id.apply_filter(raid.map_id))
@@ -143,16 +148,16 @@ impl MetaSearch for Instance {
             .filter(|raid| raid.participants.iter().any(|participant| *participant == character_id))
             .filter_map(|raid| {
                 if let InstanceMeta {
-                    instance_specific: MetaType::Raid { map_difficulty },
+                    instance_specific: MetaType::Raid { map_difficulty, .. },
                     ..
                 } = raid
                 {
-                    if filter.map_difficulty.apply_filter(map_difficulty) {
+                    if filter.map_difficulty.apply_filter(*map_difficulty) {
                         let guild = raid.participants.find_instance_guild(db_main, armory, raid.start_ts).map(|guild| SearchGuildDto { guild_id: guild.id, name: guild.name });
                         return Some(MetaRaidSearch {
                             instance_meta_id: raid.instance_meta_id,
                             map_id: raid.map_id,
-                            map_difficulty,
+                            map_difficulty: *map_difficulty,
                             map_icon: data.get_map(raid.map_id).map(|map| map.icon).unwrap(),
                             guild,
                             server_id: raid.server_id,
