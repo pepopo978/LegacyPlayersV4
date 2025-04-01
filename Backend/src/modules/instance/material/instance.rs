@@ -187,7 +187,7 @@ impl Instance {
 
                 armory.update(&mut db_main);
                 armory_counter += 1;
-                std::thread::sleep(std::time::Duration::from_secs(60));
+                std::thread::sleep(std::time::Duration::from_secs(30));
             }
         });
 

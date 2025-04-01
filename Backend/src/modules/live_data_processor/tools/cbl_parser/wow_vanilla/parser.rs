@@ -165,6 +165,9 @@ fn assign_spec_from_aura_gain(receiver: Option<&mut Participant>, spell: &str, t
     } else if spell == "Adrenaline Rush" {
         let p = receiver.unwrap();
         p.record_talents(timestamp, ROGUE_COMBAT_SPEC);
+    } else if spell == "Frenzy Effect" {
+        let p = receiver.unwrap();
+        p.record_talents(timestamp, HUNTER_BEAST_MASTERY_SPEC);
     }
 }
 
