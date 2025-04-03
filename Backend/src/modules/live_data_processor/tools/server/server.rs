@@ -488,7 +488,7 @@ impl Server {
                 }
 
                 // These are raids
-                if let 249 | 309 | 409 | 469 | 509 | 531 | 532 | 533 | 534 | 544 | 548 | 550 | 564 | 565 | 568 | 580 | 603 | 615 | 616 | 624 | 631 | 649 | 724 = *map_id {
+                if let 249 | 309 | 409 | 469 | 509 | 531 | 532 | 533 | 534 | 544 | 548 | 550 | 564 | 565 | 568 | 580 | 603 | 615 | 616 | 624 | 631 | 649 | 724 | 814 | 807 = *map_id {
                     if let Some(instance_meta_id) = self.create_instance_meta(db_main, message.timestamp, *instance_id, *map_id, member_id, upload_id) {
                         // Vanilla does usually not set difficulty for raids correctly
                         // Nor does TBC
@@ -501,9 +501,9 @@ impl Server {
                                     9
                                 }
                             }
-                            409 | 469 | 531 => 9,                         // 40 man
+                            409 | 469 | 531 | 814 | 807 => 9,                         // 40 man
                             309 | 509 => 148,                             // 20 man
-                            532 | 568 => 3,                               // 10 man
+                            532 | 568  => 3,                              // 10 man
                             534 | 544 | 548 | 550 | 564 | 580 | 565 => 4, // 25 man
                             533 => {
                                 if *map_difficulty == 3 || *map_difficulty == 4 {
