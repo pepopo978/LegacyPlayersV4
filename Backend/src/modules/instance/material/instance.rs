@@ -214,7 +214,7 @@ fn calculate_speed_runs(instance_metas: Arc<RwLock<(u32, HashMap<u32, InstanceMe
             instance_encounters.insert(509, vec![30, 31, 32, 33, 34, 35]);
             instance_encounters.insert(531, vec![36, 37, 38, 39, 40, 41, 42, 163, 164, 165]);
             instance_encounters.insert(533, vec![43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54, 55, 56, 57]);
-            instance_encounters.insert(532, vec![58, 59, 60, 61, 63, 64, 65, 66, 67, 68]);
+            instance_encounters.insert(532, vec![201, 202, 203, 204, 205]); // lower kara
             instance_encounters.insert(565, vec![69, 70]);
             instance_encounters.insert(544, vec![71]);
             instance_encounters.insert(550, vec![72, 73, 74, 75]);
@@ -230,6 +230,9 @@ fn calculate_speed_runs(instance_metas: Arc<RwLock<(u32, HashMap<u32, InstanceMe
             instance_encounters.insert(649, vec![128, 129, 130, 131, 132]);
             instance_encounters.insert(631, vec![133, 134, 136, 137, 138, 139, 140, 141, 143, 144]);
             instance_encounters.insert(724, vec![145]);
+            instance_encounters.insert(807, vec![200]); // ES
+            instance_encounters.insert(814, vec![206, 207, 208, 209, 210]); // upper kara up to echo
+
             instance_encounters
         };
     }
