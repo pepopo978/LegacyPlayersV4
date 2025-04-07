@@ -75,12 +75,17 @@ impl Instance {
             let armory = Armory::default().init(&mut db_main);
 
             loop {
-                println!("Updating instance data at {}", time_util::now());
+                println!("[Update loop] starting update {}", time_util::now());
                 delete_old_character_data(&mut db_main);
+                println!("[Update loop] finish delete old character data");
                 evict_attempts_cache(Arc::clone(&instance_attempts_arc_clone));
+                println!("[Update loop] finish evict_attempts_cache");
                 evict_export_cache(Arc::clone(&instance_exports_arc_clone));
+                println!("[Update loop] finish evict_export_cache");
                 update_instance_metas(Arc::clone(&instance_metas_arc_clone), &mut db_main, &armory);
+                println!("[Update loop] finish update_instance_metas");
                 update_instance_kill_attempts(Arc::clone(&instance_kill_attempts_clone), &mut db_main);
+                println!("[Update loop] finish update_instance_kill_attempts");
 
                 if startup || armory_counter >= 1000 {
                     // purge old character info
@@ -184,9 +189,13 @@ impl Instance {
                         }
                     }
                 }
+                println!("[Update loop] finish spec update");
 
                 armory.update(&mut db_main);
+                println!("[Update loop] finish armory update");
+
                 armory_counter += 1;
+                println!("[Update loop] Updating instance data done at {}", time_util::now());
                 std::thread::sleep(std::time::Duration::from_secs(30));
             }
         });

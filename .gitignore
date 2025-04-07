@@ -8,3 +8,4 @@ Storage
 logs
 .env
 /spell_dbc.sql
+/inserts.sql
