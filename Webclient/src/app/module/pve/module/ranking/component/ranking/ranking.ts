@@ -32,8 +32,8 @@ export class RankingComponent implements OnInit, OnDestroy {
     modes_current_selection: number = 1;
     modes: Array<SelectOption> = [
         {value: 1, label_key: "Damage per second"},
-        {value: 2, label_key: "Effective heal per second"},
-        {value: 3, label_key: "Threat per second"},
+        // {value: 2, label_key: "Effective heal per second"},
+        // {value: 3, label_key: "Threat per second"},
     ];
 
     selections_current_selection: number = 1;

@@ -1,0 +1,3 @@
+[global]
+workers = 48
+log = "normal"

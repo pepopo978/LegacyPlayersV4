@@ -104,6 +104,90 @@ impl Instance {
                     armory_counter = 0;
                 }
 
+                // update an instance metas that doesn't have updated specs
+                if let Some(instance_meta) = db_main
+                    .select(
+                        "SELECT A.id, A.server_id, A.start_ts, A.end_ts, A.expired, A.map_id, B.map_difficulty, C.member_id, A.upload_id, A.privacy_type, A.privacy_ref, A.updated_specs \
+         FROM instance_meta A \
+         JOIN instance_raid B ON A.id = B.instance_meta_id \
+         JOIN instance_uploads C ON A.upload_id = C.id \
+         WHERE A.updated_specs = 0 \
+         LIMIT 10", // Restrict to 10 results
+                        |mut row| InstanceMeta {
+                            instance_meta_id: row.take(0).unwrap(),
+                            server_id: row.take(1).unwrap(),
+                            start_ts: row.take(2).unwrap(),
+                            end_ts: row.take_opt(3).unwrap().ok(),
+                            expired: row.take_opt(4).unwrap().ok(),
+                            map_id: row.take(5).unwrap(),
+                            participants: Vec::new(),
+                            instance_specific: MetaType::Raid {
+                                map_difficulty: row.take::<u8, usize>(6).unwrap(),
+                            },
+                            uploaded_user: row.take(7).unwrap(),
+                            upload_id: row.take(8).unwrap(),
+                            privacy_type: PrivacyType::new(row.take(9).unwrap(), row.take(10).unwrap()),
+                            updated_specs: row.take(11).unwrap(),
+                        },
+                    )
+                    .into_iter()
+                    .next() // Extract the first (and only) result
+                {
+                    let storage_path = std::env::var("INSTANCE_STORAGE_PATH").expect("storage path must be set");
+                    let zip_path = format!("{}/zips/upload_{}.zip", storage_path, instance_meta.upload_id);
+                    let file = File::open(zip_path).map_err(|_| LiveDataProcessorFailure::InvalidZipFile);
+
+                    if let Ok(file) = file {
+                        // Create a ZipArchive from the file
+                        let zip = ZipArchive::new(file).map_err(|_| LiveDataProcessorFailure::InvalidZipFile);
+
+                        if let Ok(mut zip) = zip {
+                            let log_file = zip.by_index(0).map_err(|_| LiveDataProcessorFailure::InvalidZipFile);
+
+                            if let Ok(log_file) = log_file {
+                                let bytes = log_file.bytes().filter_map(|byte| byte.ok()).collect::<Vec<u8>>();
+                                let mut content = Vec::new();
+                                for slice in bytes.split(|c| *c == 10) {
+                                    if let Ok(parsed_str) = std::str::from_utf8(slice) {
+                                        content.push(parsed_str);
+                                    }
+                                }
+                                let content = content.join("\n");
+
+                                println!("Updating specs for instance meta {}", instance_meta.instance_meta_id);
+
+                                // delete all character histories within the start/end timestamp
+                                db_main.execute_wparams("DELETE FROM armory_character_history WHERE timestamp >= :start_ts AND timestamp <= :end_ts and character_id in (SELECT character_id FROM instance_participant WHERE instance_meta_id = :instance_meta_id)",
+                                                        params!(
+                                                            "start_ts" => instance_meta.start_ts/1000,
+                                                            "end_ts" => instance_meta.end_ts.unwrap_or(instance_meta.start_ts)/1000,
+                                                            "instance_meta_id" => instance_meta.instance_meta_id
+                                                        ));
+
+                                let mut combat_log_parser = crate::modules::live_data_processor::material::WoWVanillaParser::new(instance_meta.server_id);
+
+                                parse_cbl(&mut combat_log_parser,
+                                          &live_data_processor,
+                                          &mut conn,
+                                          &data,
+                                          &armory,
+                                          &content,
+                                          instance_meta.start_ts,
+                                          instance_meta.end_ts.unwrap_or(instance_meta.start_ts),
+                                          instance_meta.uploaded_user,
+                                          false);
+
+
+                                // mark instance meta as updated
+                                db_main.execute_wparams("UPDATE instance_meta SET updated_specs = 1 WHERE id = :instance_meta_id",
+                                                        params!("instance_meta_id" => instance_meta.instance_meta_id));
+
+                            }
+                        }
+                    }
+                }
+                println!("[Update loop] finish spec update");
+
                 armory.update(&mut db_main);
                 println!("[Update loop] finish armory update");
 
