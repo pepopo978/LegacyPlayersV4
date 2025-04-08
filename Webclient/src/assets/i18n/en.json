@@ -7,6 +7,7 @@
         "404": "Server is not available!",
         "413": "File is too large!",
         "429": "Too many requests!",
+        "499": "Server is overloaded, try again in ~15 min",
         "500": "This is a bug! Contact the owner!",
         "502": "Backend server is down!",
         "504": "The request timed out!",
@@ -30,6 +31,7 @@
         "537": "ZIP File not recognized!",
         "538": "Invalid Format of the start time!",
         "539": "Invalid Format of the end time!",
+        "540": "Rankings are currently updating!",
         "599": "An unknown error occurred!",
         "mail_confirm": "All set! There will be no e-mail verification.",
         "reset_mail_confirm": "A mail has been send to the specified address!"

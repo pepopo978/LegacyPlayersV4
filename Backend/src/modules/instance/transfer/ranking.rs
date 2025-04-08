@@ -12,39 +12,42 @@ use std::io::Write;
 
 #[openapi]
 #[get("/ranking/dps")]
-pub fn get_instance_ranking_dps(me: State<Instance>, armory: State<Armory>) -> GzippedResponse {
+pub fn get_instance_ranking_dps(me: State<Instance>, armory: State<Armory>) -> Result<GzippedResponse, InstanceFailure> {
     let instance_metas = me.instance_metas.read().unwrap();
-    let rankings = me.instance_rankings_dps.read().unwrap();
+    let rankings = match me.instance_rankings_dps.try_read() {
+        Ok(rankings) => rankings,
+        Err(_) => return Err(InstanceFailure::RankingsUpdating),
+    };
 
     let json_data = create_ranking_export(&instance_metas.1, &rankings.1, &armory, None, None);
 
-    // Serialize the data to JSON
     let serialized_data = serde_json::to_vec(&json_data).expect("Serialization failed");
 
-    // Compress the JSON using gzip
     let mut encoder = GzEncoder::new(Vec::new(), Compression::default());
     encoder.write_all(&serialized_data).expect("Gzip compression failed");
     let compressed_data = encoder.finish().expect("Gzip finalization failed");
 
-    GzippedResponse(compressed_data)
+    Ok(GzippedResponse(compressed_data))
 }
 
 #[openapi]
 #[get("/ranking/dps/by_season/<season>")]
-pub fn get_instance_ranking_dps_by_season(me: State<Instance>, armory: State<Armory>, season: u8) -> GzippedResponse {
+pub fn get_instance_ranking_dps_by_season(me: State<Instance>, armory: State<Armory>, season: u8) -> Result<GzippedResponse, InstanceFailure> {
     let instance_metas = me.instance_metas.read().unwrap();
-    let rankings = me.instance_rankings_dps.read().unwrap();
+    let rankings = match me.instance_rankings_dps.try_read() {
+        Ok(rankings) => rankings,
+        Err(_) => return Err(InstanceFailure::RankingsUpdating),
+    };
 
     let json_data = create_ranking_export(&instance_metas.1, &rankings.1, &armory, Some(season), None);
-    // Serialize the data to JSON
+
     let serialized_data = serde_json::to_vec(&json_data).expect("Serialization failed");
 
-    // Compress the JSON using gzip
     let mut encoder = GzEncoder::new(Vec::new(), Compression::default());
     encoder.write_all(&serialized_data).expect("Gzip compression failed");
     let compressed_data = encoder.finish().expect("Gzip finalization failed");
 
-    GzippedResponse(compressed_data)
+    Ok(GzippedResponse(compressed_data))
 }
 
 #[openapi]

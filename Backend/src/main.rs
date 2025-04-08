@@ -41,7 +41,6 @@ use dotenv::dotenv;
 pub use rocket_contrib::databases::mysql;
 use rocket_contrib::databases::mysql::Opts;
 use rocket_okapi::swagger_ui::{make_swagger_ui, SwaggerUIConfig, UrlObject};
-use rocket_prometheus::PrometheusMetrics;
 
 use crate::modules::{account, armory, data, instance, live_data_processor, tooltip, utility};
 

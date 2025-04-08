@@ -7,6 +7,7 @@ use std::io::Cursor;
 #[derive(Debug, JsonSchema)]
 pub enum InstanceFailure {
     InvalidInput,
+    RankingsUpdating,
     Unknown
 }
 
@@ -17,6 +18,10 @@ impl Responder<'static> for InstanceFailure {
             Self::InvalidInput => {
                 body = "Invalid input!".to_owned();
                 Status::new(534, "InvalidInput")
+            },
+            Self::RankingsUpdating => {
+                body = "Rankings are currently updating!".to_owned();
+                Status::new(540, "RankingsUpdating")
             },
             Self::Unknown => {
                 body = "Unknown error!".to_owned();
@@ -32,6 +37,7 @@ impl OpenApiResponder<'static> for InstanceFailure {
         let mut responses = Responses::default();
         let schema = gen.json_schema::<String>();
         add_schema_response(&mut responses, 534, "text/plain", schema.clone())?;
+        add_schema_response(&mut responses, 540, "text/plain", schema.clone())?;
         add_schema_response(&mut responses, 599, "text/plain", schema)?;
         Ok(responses)
     }
