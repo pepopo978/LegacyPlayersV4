@@ -57,6 +57,31 @@ mod util;
 #[database("main")]
 pub struct MainDb(mysql::Conn);
 
+pub struct Logger;
+use rocket::{fairing::{Fairing, Info, Kind}, Request, Data, Response};
+use std::time::Instant;
+
+
+impl Fairing for Logger {
+    fn info(&self) -> Info {
+        Info {
+            name: "Request Logger",
+            kind: Kind::Request | Kind::Response,
+        }
+    }
+
+    fn on_request(&self, request: &mut Request, _: &Data) {
+        request.local_cache(|| Instant::now());
+        println!("Received request: {} {}", request.method(), request.uri());
+    }
+
+    fn on_response(&self, request: &Request, _response: &mut Response) {
+        let start_time = request.local_cache::<Instant, _>(|| Instant::now());
+        let duration = start_time.elapsed();
+        println!("Processed request: {} {} in {:?}", request.method(), request.uri(), duration);
+    }
+}
+
 fn main() {
     dotenv().ok();
     let dns = std::env::var("MYSQL_URL").unwrap();
@@ -71,8 +96,6 @@ fn main() {
     let live_data_processor = live_data_processor::LiveDataProcessor::default().init(&mut conn);
     let instance = instance::Instance::default().init(instance_conn);
     let utility = utility::Utility::default().init(&mut conn);
-
-    let prometheus = PrometheusMetrics::new();
 
     let swagger_ui_config = SwaggerUIConfig {
         url: "/openapi.json".to_string(),
@@ -118,8 +141,7 @@ fn main() {
         .manage(instance)
         .manage(utility)
         .attach(MainDb::fairing())
-        .attach(prometheus.clone())
-        .mount("/metrics", prometheus)
+        .attach(Logger) // Attach the Logger fairing here
         .mount("/API/", make_swagger_ui(&swagger_ui_config))
         .mount(
             "/API/account/",
@@ -289,12 +311,12 @@ fn main() {
                 instance::transfer::meta::export_rated_arenas,
                 instance::transfer::meta::export_skirmishes,
                 instance::transfer::meta::export_battlegrounds,
-                // instance::transfer::meta_search::export_raids,
+                instance::transfer::meta_search::export_raids,
                 instance::transfer::meta_search::export_raids_by_member_id,
                 instance::transfer::meta_search::export_raids_by_character_id,
-                // instance::transfer::meta_search::export_rated_arenas,
-                // instance::transfer::meta_search::export_skirmishes,
-                // instance::transfer::meta_search::export_battlegrounds,
+                instance::transfer::meta_search::export_rated_arenas,
+                instance::transfer::meta_search::export_skirmishes,
+                instance::transfer::meta_search::export_battlegrounds,
                 instance::transfer::ranking::get_instance_ranking_dps,
                 instance::transfer::ranking::get_instance_ranking_dps_by_season,
                 instance::transfer::ranking::get_instance_ranking_dps_by_server_and_season,
