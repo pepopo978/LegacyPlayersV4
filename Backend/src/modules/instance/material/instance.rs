@@ -93,14 +93,14 @@ impl Instance {
                     update_instance_rankings_tps(Arc::clone(&instance_rankings_tps_arc_clone), &mut db_main, &armory);
                     println!("Updating rankings complete at {}", time_util::now());
 
-                    println!("Updating speed runs at {}", time_util::now());
-                    calculate_speed_runs(Arc::clone(&instance_metas_arc_clone),
-                                         Arc::clone(&instance_kill_attempts_clone),
-                                         Arc::clone(&speed_runs_arc_clone), &mut db_main, &armory);
-                    calculate_speed_kills(Arc::clone(&instance_metas_arc_clone),
-                                          Arc::clone(&instance_kill_attempts_clone),
-                                          Arc::clone(&speed_kills_arc_clone), &mut db_main, &armory);
-                    println!("Updating speed runs complete at {}", time_util::now());
+                    // println!("Updating speed runs at {}", time_util::now());
+                    // calculate_speed_runs(Arc::clone(&instance_metas_arc_clone),
+                    //                      Arc::clone(&instance_kill_attempts_clone),
+                    //                      Arc::clone(&speed_runs_arc_clone), &mut db_main, &armory);
+                    // calculate_speed_kills(Arc::clone(&instance_metas_arc_clone),
+                    //                       Arc::clone(&instance_kill_attempts_clone),
+                    //                       Arc::clone(&speed_kills_arc_clone), &mut db_main, &armory);
+                    // println!("Updating speed runs complete at {}", time_util::now());
                     armory_counter = 0;
                 }
 
