@@ -124,6 +124,25 @@ export class RankingComponent implements OnInit, OnDestroy {
             list_selection_callback: (button, selected_list, current_list, checked) =>
                 this.uncheck_if_all_check_else([56, 57], selected_list, current_list)
         },
+        {
+            id: -12,
+            label: "Kara40 - All",
+            list_selection_callback: (button, selected_list, current_list, checked) =>
+                this.uncheck_if_all_check_else([206, 207, 208, 209, 210], selected_list, current_list)
+        },
+        {
+            id: -13,
+            label: "Kara40 - Boss 1-3",
+            list_selection_callback: (button, selected_list, current_list, checked) =>
+                this.uncheck_if_all_check_else([206, 207, 208], selected_list, current_list)
+        },
+
+        {
+            id: -14,
+            label: "Kara40 - Boss 4-5",
+            list_selection_callback: (button, selected_list, current_list, checked) =>
+                this.uncheck_if_all_check_else([209, 210], selected_list, current_list)
+        },
     ];
     additional_spec_buttons: AdditionalButton[] = [
         {
