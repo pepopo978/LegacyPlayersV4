@@ -75,7 +75,7 @@ impl MetaSearch for Instance {
         });
 
         SearchResult {
-            result: result.into_iter().skip((filter.page * 50) as usize).take(10).collect(),
+            result: result.into_iter().skip((filter.page * 50) as usize).take(50).collect(),
             num_items: num_raids,
         }
     }
