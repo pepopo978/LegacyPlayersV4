@@ -20,7 +20,7 @@ impl RetrieveMap for Data {
     fn get_map_by_name(&self, name: &String) -> Option<Map> {
         self.maps.iter().find_map(|(_, map)| {
             if self.get_localization(1, map.localization_id).map(|localization| localization.content).contains(name) {
-                return Some(map.clone());
+                    return Some(map.clone());
             }
             None
         })

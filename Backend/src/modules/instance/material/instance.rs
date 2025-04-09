@@ -58,8 +58,6 @@ impl Instance {
         let instance_rankings_hps_arc_clone = Arc::clone(&self.instance_rankings_hps);
         let instance_rankings_tps_arc_clone = Arc::clone(&self.instance_rankings_tps);
         let instance_kill_attempts_clone = Arc::clone(&self.instance_kill_attempts);
-        let speed_runs_arc_clone = Arc::clone(&self.speed_runs);
-        let speed_kills_arc_clone = Arc::clone(&self.speed_kills);
 
         let dns = std::env::var("MYSQL_URL").unwrap();
         let opts = Opts::from_url(&dns).unwrap();

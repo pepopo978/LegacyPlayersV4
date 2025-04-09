@@ -31,6 +31,7 @@ pub fn parse_unit(cache: &mut HashMap<String, Unit>, data: &Data, unit_name: &st
             is_mind_control: !self_damage && unit_name.contains("(") && unit_name.contains(")"),
         }
     }
+
     cache.insert(unit_name, unit.clone());
     Some(unit)
 }

@@ -13,7 +13,7 @@ import {SettingsService} from "src/app/service/settings";
 })
 export class TableComponent implements OnChanges {
 
-    static readonly PAGE_SIZE: number = 10;
+    static readonly PAGE_SIZE: number = 50;
 
     @Output() filterOrPageChanged: EventEmitter<object> = new EventEmitter<object>();
     @Output() share: EventEmitter<any> = new EventEmitter();

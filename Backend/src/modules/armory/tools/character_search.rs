@@ -67,8 +67,8 @@ impl PerformCharacterSearch for Armory {
         SearchResult {
             result: result
                 .iter()
-                .skip((filter.page * 10) as usize)
-                .take(10)
+                .skip((filter.page * 50) as usize)
+                .take(50)
                 .map(|(character, guild)| {
                     let race_id = character.last_update.as_ref().unwrap().character_info.race_id;
                     let last_update = character.last_update.as_ref().unwrap();

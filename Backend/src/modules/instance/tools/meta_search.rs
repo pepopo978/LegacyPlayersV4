@@ -75,7 +75,7 @@ impl MetaSearch for Instance {
         });
 
         SearchResult {
-            result: result.into_iter().skip((filter.page * 10) as usize).take(10).collect(),
+            result: result.into_iter().skip((filter.page * 50) as usize).take(10).collect(),
             num_items: num_raids,
         }
     }
@@ -131,7 +131,7 @@ impl MetaSearch for Instance {
         });
 
         SearchResult {
-            result: result.into_iter().skip((filter.page * 10) as usize).take(10).collect(),
+            result: result.into_iter().skip((filter.page * 50) as usize).take(50).collect(),
             num_items: num_raids,
         }
     }
@@ -184,7 +184,7 @@ impl MetaSearch for Instance {
         });
 
         SearchResult {
-            result: result.into_iter().skip((filter.page * 10) as usize).take(10).collect(),
+            result: result.into_iter().skip((filter.page * 50) as usize).take(50).collect(),
             num_items: num_raids,
         }
     }
@@ -246,7 +246,7 @@ impl MetaSearch for Instance {
         });
 
         SearchResult {
-            result: result.into_iter().skip((filter.page * 10) as usize).take(10).collect(),
+            result: result.into_iter().skip((filter.page * 50) as usize).take(50).collect(),
             num_items: num_rated_arenas,
         }
     }
@@ -289,7 +289,7 @@ impl MetaSearch for Instance {
         });
 
         SearchResult {
-            result: result.into_iter().skip((filter.page * 10) as usize).take(10).collect(),
+            result: result.into_iter().skip((filter.page * 50) as usize).take(50).collect(),
             num_items: num_skirmishes,
         }
     }
@@ -338,7 +338,7 @@ impl MetaSearch for Instance {
         });
 
         SearchResult {
-            result: result.into_iter().skip((filter.page * 10) as usize).take(10).collect(),
+            result: result.into_iter().skip((filter.page * 50) as usize).take(50).collect(),
             num_items: num_battlegrounds,
         }
     }
