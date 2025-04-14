@@ -235,7 +235,7 @@ fn calculate_speed_runs(instance_metas: Arc<RwLock<(u32, HashMap<u32, InstanceMe
             instance_encounters.insert(631, vec![133, 134, 136, 137, 138, 139, 140, 141, 143, 144]);
             instance_encounters.insert(724, vec![145]);
             instance_encounters.insert(807, vec![200]); // ES
-            instance_encounters.insert(814, vec![206, 207, 208, 209, 210]); // upper kara up to echo
+            instance_encounters.insert(814, vec![206, 207, 208, 209, 210, 211, 212, 213, 214]); // upper kara
 
             instance_encounters
         };
