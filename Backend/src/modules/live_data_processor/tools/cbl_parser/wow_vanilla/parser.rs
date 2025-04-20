@@ -411,6 +411,29 @@ impl CombatLogParser for WoWVanillaParser {
 
             assign_spec_from_cast(self.participants.get_mut(&attacker.unit_id), spell_name, event_ts);
 
+            // Check if damage is 0 and handle as absorb-only
+            if damage == 0 {
+                let absorbed = trailer.iter().find(|(_, hit_type)| *hit_type == HitType::PartialAbsorb)
+                    .map(|(amount, _)| amount.unwrap())
+                    .unwrap_or(0);
+
+                return Some(vec![MessageType::SpellDamage(DamageDone {
+                    attacker,
+                    victim,
+                    spell_id: Some(spell_id),
+                    spell_name: Some(spell_name.to_string()),
+                    hit_mask,
+                    blocked: 0,
+                    damage_over_time: false,
+                    damage_components: vec![DamageComponent {
+                        school_mask: school as u8,
+                        damage: 0,
+                        resisted_or_glanced: 0,
+                        absorbed,
+                    }],
+                })]);
+            }
+
             return Some(vec![
                 MessageType::SpellCast(SpellCast {
                     caster: attacker.clone(),
