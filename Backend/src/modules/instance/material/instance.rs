@@ -106,11 +106,11 @@ impl Instance {
                 if let Some(instance_meta) = db_main
                     .select(
                         "SELECT A.id, A.server_id, A.start_ts, A.end_ts, A.expired, A.map_id, B.map_difficulty, C.member_id, A.upload_id, A.privacy_type, A.privacy_ref, A.updated_specs \
-         FROM instance_meta A \
-         JOIN instance_raid B ON A.id = B.instance_meta_id \
-         JOIN instance_uploads C ON A.upload_id = C.id \
-         WHERE A.updated_specs = 0 \
-         LIMIT 10", // Restrict to 10 results
+     FROM instance_meta A \
+     JOIN instance_raid B ON A.id = B.instance_meta_id \
+     JOIN instance_uploads C ON A.upload_id = C.id \
+     WHERE A.updated_specs = 0 \
+     LIMIT 10", // Restrict to 10 results
                         |mut row| InstanceMeta {
                             instance_meta_id: row.take(0).unwrap(),
                             server_id: row.take(1).unwrap(),
@@ -157,10 +157,10 @@ impl Instance {
                                 // delete all character histories within the start/end timestamp
                                 db_main.execute_wparams("DELETE FROM armory_character_history WHERE timestamp >= :start_ts AND timestamp <= :end_ts and character_id in (SELECT character_id FROM instance_participant WHERE instance_meta_id = :instance_meta_id)",
                                                         params!(
-                                                            "start_ts" => instance_meta.start_ts/1000,
-                                                            "end_ts" => instance_meta.end_ts.unwrap_or(instance_meta.start_ts)/1000,
-                                                            "instance_meta_id" => instance_meta.instance_meta_id
-                                                        ));
+                                                        "start_ts" => instance_meta.start_ts/1000,
+                                                        "end_ts" => instance_meta.end_ts.unwrap_or(instance_meta.start_ts)/1000,
+                                                        "instance_meta_id" => instance_meta.instance_meta_id
+                                                    ));
 
                                 let mut combat_log_parser = crate::modules::live_data_processor::material::WoWVanillaParser::new(instance_meta.server_id);
 

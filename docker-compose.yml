@@ -29,6 +29,7 @@ services:
     - HOST=turtlogs.com
     - MODEL_GENERATOR=http://localhost:5555
     - INSTANCE_STORAGE_PATH=/Storage
+    - USE_HEAPTRACK=false  # Set to true/1 to enable heaptrack
   webclient:
     build:
       context: ./Webclient

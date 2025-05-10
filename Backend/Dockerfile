@@ -5,16 +5,18 @@ RUN rustup default nightly-2023-01-22
 
 RUN rustup target add wasm32-unknown-unknown
 
+# Install heaptrack
+RUN apt-get update && apt-get install -y heaptrack heaptrack-gui
+
 RUN mkdir /Backend
 COPY ./src /Backend/src
 COPY ./sub_crates /Backend/sub_crates
 COPY ./Cargo.toml /Backend/Cargo.toml
+COPY ./Cargo.lock /Backend/Cargo.lock
 
 WORKDIR /Backend
 
-RUN export CARGO_REGISTRIES_CRATES_IO_PROTOCOL=sparse;cargo update
-RUN export CARGO_REGISTRIES_CRATES_IO_PROTOCOL=sparse;cargo build --release
+RUN cargo build --release --locked
 
-ENTRYPOINT ["/bin/bash", "-c", "export RUST_BACKTRACE=full;sleep 5s && /Backend/target/release/backend"]
-
-
+# Run with heaptrack
+ENTRYPOINT ["/bin/bash", "-c", "export RUST_BACKTRACE=full; sleep 5s && if [ \"$USE_HEAPTRACK\" = \"true\" ] || [ \"$USE_HEAPTRACK\" = \"1\" ]; then heaptrack /Backend/target/release/backend; else /Backend/target/release/backend; fi"]
