@@ -187,16 +187,48 @@ impl Instance {
                 armory.update(&mut db_main);
                 println!("[Update loop] finish armory update");
 
-                println!("[Update loop] Memory usage:");
-                println!("  instance_metas: {} entries", instance_metas_arc_clone.read().unwrap().1.len());
-                println!("  instance_exports: {} entries", instance_exports_arc_clone.read().unwrap().len());
-                println!("  instance_attempts: {} entries", instance_attempts_arc_clone.read().unwrap().len());
-                println!("  instance_rankings_dps: {} encounters", instance_rankings_dps_arc_clone.read().unwrap().1.len());
-                println!("  instance_rankings_hps: {} encounters", instance_rankings_hps_arc_clone.read().unwrap().1.len());
-                println!("  instance_rankings_tps: {} encounters", instance_rankings_tps_arc_clone.read().unwrap().1.len());
-                println!("  instance_kill_attempts: {} instances", instance_kill_attempts_clone.read().unwrap().1.len());
+                println!("[Update loop] Collection sizes:");
+                let instance_metas = instance_metas_arc_clone.read().unwrap();
+                let total_participants = instance_metas.1.values().map(|meta| meta.participants.len()).sum::<usize>();
+                println!("  instance_metas: {} entries with {} total participants", instance_metas.1.len(), total_participants);
+
+                let instance_exports = instance_exports_arc_clone.read().unwrap();
+                // Access the inner content - replace with the correct accessor for Cachable
+                let total_exports = instance_exports.values().map(|cachable| cachable.get_cached().len()).sum::<usize>();
+                println!("  instance_exports: {} entries with {} total strings", instance_exports.len(), total_exports);
+
+                let instance_attempts = instance_attempts_arc_clone.read().unwrap();
+                // Access the inner content - replace with the correct accessor for Cachable
+                let total_attempts = instance_attempts.values().map(|cachable| cachable.get_cached().len()).sum::<usize>();
+                println!("  instance_attempts: {} entries with {} total attempts", instance_attempts.len(), total_attempts);
+
+                let instance_rankings_dps = instance_rankings_dps_arc_clone.read().unwrap();
+                let dps_total = instance_rankings_dps.1.values()
+                    .flat_map(|chars| chars.values())
+                    .map(|rankings| rankings.len())
+                    .sum::<usize>();
+                println!("  instance_rankings_dps: {} encounters with {} total rankings", instance_rankings_dps.1.len(), dps_total);
+
+                let instance_rankings_hps = instance_rankings_hps_arc_clone.read().unwrap();
+                let hps_total = instance_rankings_hps.1.values()
+                    .flat_map(|chars| chars.values())
+                    .map(|rankings| rankings.len())
+                    .sum::<usize>();
+                println!("  instance_rankings_hps: {} encounters with {} total rankings", instance_rankings_hps.1.len(), hps_total);
+
+                let instance_rankings_tps = instance_rankings_tps_arc_clone.read().unwrap();
+                let tps_total = instance_rankings_tps.1.values()
+                    .flat_map(|chars| chars.values())
+                    .map(|rankings| rankings.len())
+                    .sum::<usize>();
+                println!("  instance_rankings_tps: {} encounters with {} total rankings", instance_rankings_tps.1.len(), tps_total);
+
+                let instance_kill_attempts = instance_kill_attempts_clone.read().unwrap();
+                let kill_total = instance_kill_attempts.1.values().map(|attempts| attempts.len()).sum::<usize>();
+                println!("  instance_kill_attempts: {} instances with {} total attempts", instance_kill_attempts.1.len(), kill_total);
+
                 println!("  armory.characters: {} characters", armory.get_character_count());
-                
+
                 armory_counter += 1;
                 println!("[Update loop] Updating instance data done at {}", time_util::now());
                 std::thread::sleep(std::time::Duration::from_secs(30));
