@@ -4,12 +4,12 @@ use std::io::Read;
 use std::sync::{Arc, RwLock};
 
 use crate::material::Cachable;
-use crate::modules::armory::tools::{GetArenaTeam, GetCharacter};
+use crate::modules::armory::tools::{GetCharacter};
 use crate::modules::armory::util::talent_tree::get_talent_tree;
 use crate::modules::armory::Armory;
 use crate::modules::data::Data;
 use crate::modules::instance::domain_value::{InstanceAttempt, InstanceMeta, MetaType, PrivacyType};
-use crate::modules::instance::dto::{InstanceViewerAttempt, RankingResult, SpeedKill, SpeedRun};
+use crate::modules::instance::dto::{InstanceViewerAttempt, SpeedKill, SpeedRun};
 use crate::modules::instance::tools::FindInstanceGuild;
 use crate::modules::live_data_processor::dto::LiveDataProcessorFailure;
 use crate::modules::live_data_processor::tools::log_parser::parse_cbl;
@@ -25,11 +25,6 @@ pub struct Instance {
     pub speed_runs: Arc<RwLock<Vec<SpeedRun>>>,
     pub speed_kills: Arc<RwLock<Vec<SpeedKill>>>,
 
-    // encounter_id => character_id => Vec<Ranking>
-    pub instance_rankings_dps: Arc<RwLock<(u32, HashMap<u32, HashMap<u32, Vec<RankingResult>>>)>>,
-    pub instance_rankings_hps: Arc<RwLock<(u32, HashMap<u32, HashMap<u32, Vec<RankingResult>>>)>>,
-    pub instance_rankings_tps: Arc<RwLock<(u32, HashMap<u32, HashMap<u32, Vec<RankingResult>>>)>>,
-    // attempt_id => (instance_meta_id => Vec<Attempt>)
     pub instance_kill_attempts: Arc<RwLock<(u32, HashMap<u32, Vec<InstanceAttempt>>)>>,
 }
 
@@ -39,9 +34,6 @@ impl Default for Instance {
             instance_metas: Arc::new(RwLock::new((0, HashMap::new()))),
             instance_exports: Arc::new(RwLock::new(HashMap::new())),
             instance_attempts: Arc::new(RwLock::new(HashMap::new())),
-            instance_rankings_dps: Arc::new(RwLock::new((0, HashMap::new()))),
-            instance_rankings_hps: Arc::new(RwLock::new((0, HashMap::new()))),
-            instance_rankings_tps: Arc::new(RwLock::new((0, HashMap::new()))),
             instance_kill_attempts: Arc::new(RwLock::new((0, HashMap::new()))),
             speed_runs: Arc::new(RwLock::new(Vec::new())),
             speed_kills: Arc::new(RwLock::new(Vec::new())),
@@ -54,9 +46,6 @@ impl Instance {
         let instance_metas_arc_clone = Arc::clone(&self.instance_metas);
         let instance_exports_arc_clone = Arc::clone(&self.instance_exports);
         let instance_attempts_arc_clone = Arc::clone(&self.instance_attempts);
-        let instance_rankings_dps_arc_clone = Arc::clone(&self.instance_rankings_dps);
-        let instance_rankings_hps_arc_clone = Arc::clone(&self.instance_rankings_hps);
-        let instance_rankings_tps_arc_clone = Arc::clone(&self.instance_rankings_tps);
         let instance_kill_attempts_clone = Arc::clone(&self.instance_kill_attempts);
 
         let dns = std::env::var("MYSQL_URL").unwrap();
@@ -78,28 +67,16 @@ impl Instance {
                 println!("[Update loop] finish evict_attempts_cache");
                 evict_export_cache(Arc::clone(&instance_exports_arc_clone));
                 println!("[Update loop] finish evict_export_cache");
-                update_instance_metas(Arc::clone(&instance_metas_arc_clone), &mut db_main, &armory);
+                update_instance_metas(Arc::clone(&instance_metas_arc_clone), &mut db_main);
                 println!("[Update loop] finish update_instance_metas");
                 update_instance_kill_attempts(Arc::clone(&instance_kill_attempts_clone), &mut db_main);
                 println!("[Update loop] finish update_instance_kill_attempts");
 
-                if armory_counter == 2 || armory_counter >= 1000 {
-                    // purge old character info
+                if armory_counter % 10 == 1 {
                     println!("Updating rankings at {}", time_util::now());
-                    update_instance_rankings_dps(Arc::clone(&instance_rankings_dps_arc_clone), &mut db_main, &armory);
-                    update_instance_rankings_hps(Arc::clone(&instance_rankings_hps_arc_clone), &mut db_main, &armory);
-                    update_instance_rankings_tps(Arc::clone(&instance_rankings_tps_arc_clone), &mut db_main, &armory);
+                    update_instance_rankings_dps( &mut db_main, &armory);
+                    update_instance_rankings_hps( &mut db_main, &armory);
                     println!("Updating rankings complete at {}", time_util::now());
-
-                    // println!("Updating speed runs at {}", time_util::now());
-                    // calculate_speed_runs(Arc::clone(&instance_metas_arc_clone),
-                    //                      Arc::clone(&instance_kill_attempts_clone),
-                    //                      Arc::clone(&speed_runs_arc_clone), &mut db_main, &armory);
-                    // calculate_speed_kills(Arc::clone(&instance_metas_arc_clone),
-                    //                       Arc::clone(&instance_kill_attempts_clone),
-                    //                       Arc::clone(&speed_kills_arc_clone), &mut db_main, &armory);
-                    // println!("Updating speed runs complete at {}", time_util::now());
-                    armory_counter = 0;
                 }
 
                 // update an instance metas that doesn't have updated specs
@@ -186,48 +163,6 @@ impl Instance {
 
                 armory.update(&mut db_main);
                 println!("[Update loop] finish armory update");
-
-                println!("[Update loop] Collection sizes:");
-                let instance_metas = instance_metas_arc_clone.read().unwrap();
-                let total_participants = instance_metas.1.values().map(|meta| meta.participants.len()).sum::<usize>();
-                println!("  instance_metas: {} entries with {} total participants", instance_metas.1.len(), total_participants);
-
-                let instance_exports = instance_exports_arc_clone.read().unwrap();
-                // Access the inner content - replace with the correct accessor for Cachable
-                let total_exports = instance_exports.values().map(|cachable| cachable.get_cached().len()).sum::<usize>();
-                println!("  instance_exports: {} entries with {} total strings", instance_exports.len(), total_exports);
-
-                let instance_attempts = instance_attempts_arc_clone.read().unwrap();
-                // Access the inner content - replace with the correct accessor for Cachable
-                let total_attempts = instance_attempts.values().map(|cachable| cachable.get_cached().len()).sum::<usize>();
-                println!("  instance_attempts: {} entries with {} total attempts", instance_attempts.len(), total_attempts);
-
-                let instance_rankings_dps = instance_rankings_dps_arc_clone.read().unwrap();
-                let dps_total = instance_rankings_dps.1.values()
-                    .flat_map(|chars| chars.values())
-                    .map(|rankings| rankings.len())
-                    .sum::<usize>();
-                println!("  instance_rankings_dps: {} encounters with {} total rankings", instance_rankings_dps.1.len(), dps_total);
-
-                let instance_rankings_hps = instance_rankings_hps_arc_clone.read().unwrap();
-                let hps_total = instance_rankings_hps.1.values()
-                    .flat_map(|chars| chars.values())
-                    .map(|rankings| rankings.len())
-                    .sum::<usize>();
-                println!("  instance_rankings_hps: {} encounters with {} total rankings", instance_rankings_hps.1.len(), hps_total);
-
-                let instance_rankings_tps = instance_rankings_tps_arc_clone.read().unwrap();
-                let tps_total = instance_rankings_tps.1.values()
-                    .flat_map(|chars| chars.values())
-                    .map(|rankings| rankings.len())
-                    .sum::<usize>();
-                println!("  instance_rankings_tps: {} encounters with {} total rankings", instance_rankings_tps.1.len(), tps_total);
-
-                let instance_kill_attempts = instance_kill_attempts_clone.read().unwrap();
-                let kill_total = instance_kill_attempts.1.values().map(|attempts| attempts.len()).sum::<usize>();
-                println!("  instance_kill_attempts: {} instances with {} total attempts", instance_kill_attempts.1.len(), kill_total);
-
-                println!("  armory.characters: {} characters", armory.get_character_count());
 
                 armory_counter += 1;
                 println!("[Update loop] Updating instance data done at {}", time_util::now());
@@ -408,12 +343,17 @@ fn update_instance_kill_attempts(instance_kill_attempts: Arc<RwLock<(u32, HashMa
         });
 }
 
-fn update_instance_rankings_dps(instance_rankings_dps: Arc<RwLock<(u32, HashMap<u32, HashMap<u32, Vec<RankingResult>>>)>>, db_main: &mut impl Select, armory: &Armory) {
-    let mut rankings_dps = instance_rankings_dps.write().unwrap();
-    db_main
-        .select_wparams(
-            "SELECT A.id, A.character_id, B.encounter_id, A.attempt_id, A.damage, (B.end_ts - B.start_ts) as duration, B.instance_meta_id, C.map_difficulty, B.start_ts FROM instance_ranking_damage A JOIN instance_attempt B ON A.attempt_id = B.id \
-             JOIN instance_raid C ON B.instance_meta_id = C.instance_meta_id WHERE A.id > :last_queried_id AND B.rankable = 1 AND B.start_ts >= 1731470400000  ORDER BY A.id", // filter stuff before CC2
+fn update_instance_rankings_dps(db_main: &mut (impl Execute + Select), armory: &Armory) {
+    let results = db_main
+        .select(
+            "SELECT A.id, A.character_id, B.encounter_id, A.attempt_id, A.damage, (B.end_ts - B.start_ts) as duration,
+             B.instance_meta_id, C.map_difficulty, B.start_ts, D.server_id
+             FROM instance_ranking_damage A
+             JOIN instance_attempt B ON A.attempt_id = B.id
+             JOIN instance_raid C ON B.instance_meta_id = C.instance_meta_id
+             JOIN instance_meta D ON B.instance_meta_id = D.id
+             WHERE B.rankable = 1 AND B.start_ts >= 1731470400000
+             AND A.id not in (select id from ranking_results_damage)",
             |mut row| {
                 let id: u32 = row.take(0).unwrap();
                 let character_id: u32 = row.take(1).unwrap();
@@ -424,36 +364,79 @@ fn update_instance_rankings_dps(instance_rankings_dps: Arc<RwLock<(u32, HashMap<
                 let instance_meta_id: u32 = row.take(6).unwrap();
                 let difficulty_id: u8 = row.take(7).unwrap();
                 let start_ts: u64 = row.take(8).unwrap();
-                (id, character_id, encounter_id, attempt_id, amount, duration, instance_meta_id, difficulty_id, start_ts)
-            },
-            params!("last_queried_id" => rankings_dps.0),
-        )
-        .into_iter()
-        .for_each(|(id, character_id, encounter_id, attempt_id, amount, duration, instance_meta_id, difficulty_id, start_ts)| {
-            rankings_dps.0 = id;
-            let characters_rankings = rankings_dps.1.entry(encounter_id).or_insert_with(HashMap::new);
-            let rankings = characters_rankings.entry(character_id).or_insert_with(|| Vec::with_capacity(1));
-            rankings.push(RankingResult {
-                attempt_id,
-                amount,
-                duration,
-                instance_meta_id,
-                difficulty_id,
-                character_spec: armory
-                    .get_character_moment(db_main, character_id, start_ts)
-                    .and_then(|char_history| char_history.character_info.talent_specialization.as_ref().map(|talents| get_talent_tree(&talents) + 1))
-                    .unwrap_or(0),
-                season_index: calculate_season_index(start_ts),
-            });
-        });
+                let server_id: u32 = row.take(9).unwrap();
+                (id, character_id, encounter_id, attempt_id, amount, duration, instance_meta_id, difficulty_id, start_ts, server_id)
+            }
+        );
+
+    if results.is_empty() {
+        return;
+    }
+
+    // Build value strings
+    let mut value_strings = Vec::with_capacity(results.len());
+
+    for (id, character_id, encounter_id, attempt_id, amount, duration, instance_meta_id, difficulty_id, start_ts, server_id) in results {
+        let character_info = armory.get_character_moment(db_main, character_id, start_ts);
+
+        let hero_class_id = character_info
+            .as_ref()
+            .map(|char_history| char_history.character_info.hero_class_id)
+            .unwrap_or(0);
+
+        if hero_class_id == 0 || hero_class_id == 12 {
+            continue; // ignore unknown class
+        }
+
+        let character_name = character_info
+            .as_ref()
+            .map(|char_history| char_history.character_name.clone())
+            .unwrap_or_else(|| "Unknown".to_string());
+
+        let character_spec = character_info
+            .as_ref()
+            .and_then(|char_history| char_history.character_info.talent_specialization.as_ref().map(|talents| get_talent_tree(&talents) + 1))
+            .unwrap_or(0);
+
+        let season_index = calculate_season_index(start_ts);
+
+        // Create value string for this record
+        value_strings.push(format!(
+            "({}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, '{}')",
+            id, encounter_id, server_id, character_id, hero_class_id, instance_meta_id,
+            attempt_id, amount, duration, difficulty_id, character_spec, season_index,
+            character_name
+        ));
+    }
+
+    // Execute batch inserts with max 1000 records per batch
+    const BATCH_SIZE: usize = 1000;
+
+    for chunk in value_strings.chunks(BATCH_SIZE) {
+        if !chunk.is_empty() {
+            let batch_insert = format!(
+                "INSERT INTO ranking_results_damage (id, encounter_id, server_id, character_id, hero_class_id,
+                instance_meta_id, attempt_id, amount, duration, difficulty_id, character_spec, season_index, character_name)
+                VALUES {}",
+                chunk.join(",")
+            );
+
+            db_main.execute_one(&batch_insert);
+        }
+    }
 }
 
-fn update_instance_rankings_hps(instance_rankings_hps: Arc<RwLock<(u32, HashMap<u32, HashMap<u32, Vec<RankingResult>>>)>>, db_main: &mut impl Select, armory: &Armory) {
-    let mut rankings_hps = instance_rankings_hps.write().unwrap();
-    db_main
-        .select_wparams(
-            "SELECT A.id, A.character_id, B.encounter_id, A.attempt_id, A.heal, (B.end_ts - B.start_ts) as duration, B.instance_meta_id, C.map_difficulty, B.start_ts FROM instance_ranking_heal A JOIN instance_attempt B ON A.attempt_id = B.id JOIN \
-             instance_raid C ON B.instance_meta_id = C.instance_meta_id WHERE A.id > :last_queried_id AND B.rankable = 1 AND B.start_ts >= 1731470400000 ORDER BY A.id", // filter stuff before CC2
+fn update_instance_rankings_hps(db_main: &mut (impl Execute + Select), armory: &Armory) {
+    let results = db_main
+        .select(
+            "SELECT A.id, A.character_id, B.encounter_id, A.attempt_id, A.heal, (B.end_ts - B.start_ts) as duration,
+             B.instance_meta_id, C.map_difficulty, B.start_ts, D.server_id
+             FROM instance_ranking_heal A
+             JOIN instance_attempt B ON A.attempt_id = B.id
+             JOIN instance_raid C ON B.instance_meta_id = C.instance_meta_id
+             JOIN instance_meta D ON B.instance_meta_id = D.id
+             WHERE B.rankable = 1 AND B.start_ts >= 1731470400000
+             AND A.id not in (select id from ranking_results_heal)",
             |mut row| {
                 let id: u32 = row.take(0).unwrap();
                 let character_id: u32 = row.take(1).unwrap();
@@ -464,93 +447,110 @@ fn update_instance_rankings_hps(instance_rankings_hps: Arc<RwLock<(u32, HashMap<
                 let instance_meta_id: u32 = row.take(6).unwrap();
                 let difficulty_id: u8 = row.take(7).unwrap();
                 let start_ts: u64 = row.take(8).unwrap();
-                (id, character_id, encounter_id, attempt_id, amount, duration, instance_meta_id, difficulty_id, start_ts)
-            },
-            params!("last_queried_id" => rankings_hps.0),
-        )
-        .into_iter()
-        .for_each(|(id, character_id, encounter_id, attempt_id, amount, duration, instance_meta_id, difficulty_id, start_ts)| {
-            rankings_hps.0 = id;
-            let characters_rankings = rankings_hps.1.entry(encounter_id).or_insert_with(HashMap::new);
-            let rankings = characters_rankings.entry(character_id).or_insert_with(|| Vec::with_capacity(1));
-            rankings.push(RankingResult {
-                attempt_id,
-                amount,
-                duration,
-                instance_meta_id,
-                difficulty_id,
-                character_spec: armory
-                    .get_character_moment(db_main, character_id, start_ts)
-                    .and_then(|char_history| char_history.character_info.talent_specialization.as_ref().map(|talents| get_talent_tree(&talents) + 1))
-                    .unwrap_or(0),
-                season_index: calculate_season_index(start_ts),
-            });
-        });
-}
+                let server_id: u32 = row.take(9).unwrap();
+                (id, character_id, encounter_id, attempt_id, amount, duration, instance_meta_id, difficulty_id, start_ts, server_id)
+            }
+        );
 
-fn update_instance_rankings_tps(instance_rankings_tps: Arc<RwLock<(u32, HashMap<u32, HashMap<u32, Vec<RankingResult>>>)>>, db_main: &mut impl Select, armory: &Armory) {
-    let mut rankings_tps = instance_rankings_tps.write().unwrap();
-    db_main
-        .select_wparams(
-            "SELECT A.id, A.character_id, B.encounter_id, A.attempt_id, A.threat, (B.end_ts - B.start_ts) as duration, B.instance_meta_id, C.map_difficulty, B.start_ts FROM instance_ranking_threat A JOIN instance_attempt B ON A.attempt_id = B.id \
-             JOIN instance_raid C ON B.instance_meta_id = C.instance_meta_id WHERE A.id > :last_queried_id AND B.rankable = 1 AND B.start_ts >= 1731470400000 ORDER BY A.id", // filter stuff before CC2
-            |mut row| {
-                let id: u32 = row.take(0).unwrap();
-                let character_id: u32 = row.take(1).unwrap();
-                let encounter_id: u32 = row.take(2).unwrap();
-                let attempt_id: u32 = row.take(3).unwrap();
-                let amount: u32 = row.take(4).unwrap();
-                let duration: u64 = row.take(5).unwrap();
-                let instance_meta_id: u32 = row.take(6).unwrap();
-                let difficulty_id: u8 = row.take(7).unwrap();
-                let start_ts: u64 = row.take(8).unwrap();
-                (id, character_id, encounter_id, attempt_id, amount, duration, instance_meta_id, difficulty_id, start_ts)
-            },
-            params!("last_queried_id" => rankings_tps.0),
-        )
-        .into_iter()
-        .for_each(|(id, character_id, encounter_id, attempt_id, amount, duration, instance_meta_id, difficulty_id, start_ts)| {
-            rankings_tps.0 = id;
-            let characters_rankings = rankings_tps.1.entry(encounter_id).or_insert_with(HashMap::new);
-            let rankings = characters_rankings.entry(character_id).or_insert_with(|| Vec::with_capacity(1));
-            rankings.push(RankingResult {
-                attempt_id,
-                amount,
-                duration,
-                instance_meta_id,
-                difficulty_id,
-                character_spec: armory
-                    .get_character_moment(db_main, character_id, start_ts)
-                    .and_then(|char_history| char_history.character_info.talent_specialization.as_ref().map(|talents| get_talent_tree(&talents) + 1))
-                    .unwrap_or(0),
-                season_index: calculate_season_index(start_ts),
-            });
-        });
-}
+    if results.is_empty() {
+        return;
+    }
 
+    // Build value strings
+    let mut value_strings = Vec::with_capacity(results.len());
+
+    for (id, character_id, encounter_id, attempt_id, amount, duration, instance_meta_id, difficulty_id, start_ts, server_id) in results {
+        let character_info = armory.get_character_moment(db_main, character_id, start_ts);
+
+        let hero_class_id = character_info
+            .as_ref()
+            .map(|char_history| char_history.character_info.hero_class_id)
+            .unwrap_or(0);
+
+        if hero_class_id == 0 || hero_class_id == 12 {
+            continue; // ignore unknown class
+        }
+
+        let character_name = character_info
+            .as_ref()
+            .map(|char_history| char_history.character_name.clone())
+            .unwrap_or_else(|| "Unknown".to_string());
+
+        let character_spec = character_info
+            .as_ref()
+            .and_then(|char_history| char_history.character_info.talent_specialization.as_ref().map(|talents| get_talent_tree(&talents) + 1))
+            .unwrap_or(0);
+
+        let season_index = calculate_season_index(start_ts);
+
+        // Create value string for this record
+        value_strings.push(format!(
+            "({}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, '{}')",
+            id, encounter_id, server_id, character_id, hero_class_id, instance_meta_id,
+            attempt_id, amount, duration, difficulty_id, character_spec, season_index,
+            character_name
+        ));
+    }
+
+    // Execute batch inserts with max 1000 records per batch
+    const BATCH_SIZE: usize = 1000;
+
+    for chunk in value_strings.chunks(BATCH_SIZE) {
+        if !chunk.is_empty() {
+            let batch_insert = format!(
+                "INSERT INTO ranking_results_heal (id, encounter_id, server_id, character_id, hero_class_id,
+                instance_meta_id, attempt_id, amount, duration, difficulty_id, character_spec, season_index, character_name)
+                VALUES {}",
+                chunk.join(",")
+            );
+
+            db_main.execute_one(&batch_insert);
+        }
+    }
+}
 fn evict_attempts_cache(instance_attempts: Arc<RwLock<HashMap<u32, Cachable<Vec<InstanceViewerAttempt>>>>>) {
+    // Get current time
     let now = time_util::now();
+
+    // Time to evict (1 hour in seconds)
+    let eviction_time = 1 * 60 * 60; // 3600 seconds
+
+    // Lock for writing
     let mut instance_attempts = instance_attempts.write().unwrap();
-    for instance_meta_id in instance_attempts
+
+    // Create a list of keys to remove
+    let keys_to_remove: Vec<u32> = instance_attempts
         .iter()
-        .filter(|(_, cachable)| cachable.get_last_access() + 21600 < now)
-        .map(|(instance_meta_id, _)| *instance_meta_id)
-        .collect::<Vec<u32>>()
-    {
-        instance_attempts.remove(&instance_meta_id);
+        .filter(|(_, cachable)| cachable.get_last_access() + eviction_time < now)
+        .map(|(key, _)| *key)
+        .collect();
+
+    // Remove expired entries
+    for key in keys_to_remove {
+        instance_attempts.remove(&key);
     }
 }
 
 fn evict_export_cache(instance_exports: Arc<RwLock<HashMap<(u32, u8), Cachable<Vec<String>>>>>) {
+    // Get current time
     let now = time_util::now();
+
+    // Time to evict (1 hour in seconds)
+    let eviction_time = 1 * 60 * 60; // 3600 seconds
+
+    // Lock for writing
     let mut instance_exports = instance_exports.write().unwrap();
-    for instance_meta_id in instance_exports
+
+    // Create a list of keys to remove
+    let keys_to_remove: Vec<(u32, u8)> = instance_exports
         .iter()
-        .filter(|(_, cachable)| cachable.get_last_access() + 21600 < now)
-        .map(|(instance_meta_id, _)| *instance_meta_id)
-        .collect::<Vec<(u32, u8)>>()
-    {
-        instance_exports.remove(&instance_meta_id);
+        .filter(|(_, cachable)| cachable.get_last_access() + eviction_time < now)
+        .map(|(key, _)| *key)
+        .collect();
+
+    // Remove expired entries
+    for key in keys_to_remove {
+        instance_exports.remove(&key);
     }
 }
 
@@ -562,7 +562,7 @@ fn delete_old_character_data(db_main: &mut (impl Select + Execute)) {
     db_main.execute_one("delete FROM main.armory_gear where id not in (SELECT gear_id FROM main.armory_character_info);");
 }
 
-fn update_instance_metas(instance_metas: Arc<RwLock<(u32, HashMap<u32, InstanceMeta>)>>, db_main: &mut impl Select, armory: &Armory) {
+fn update_instance_metas(instance_metas: Arc<RwLock<(u32, HashMap<u32, InstanceMeta>)>>, db_main: &mut impl Select) {
     let mut instance_metas = instance_metas.write().unwrap();
     let params = params!("saved_instance_meta_id" => instance_metas.0);
 
@@ -592,121 +592,6 @@ fn update_instance_metas(instance_metas: Arc<RwLock<(u32, HashMap<u32, InstanceM
         .into_iter()
         .for_each(|result| {
             instance_metas.0 = if result.instance_meta_id > 50 { result.instance_meta_id - 50 } else { 0 }; // Always load previous 50 raids
-            instance_metas.1.insert(result.instance_meta_id, result);
-        });
-
-    // Rated Arenas
-    // TODO: Rename team_change1 to team1_change
-    db_main
-        .select_wparams(
-            "SELECT A.id, A.server_id, A.start_ts, A.end_ts, A.expired, A.map_id, B.winner, B.team_id1, B.team_id2, B.team_change1, B.team_change2, C.member_id, A.upload_id, A.privacy_type, A.privacy_ref, A.updated_specs FROM instance_meta A JOIN \
-             instance_rated_arena B ON A.id = B.instance_meta_id JOIN instance_uploads C ON A.upload_id = C.id WHERE A.id > :saved_instance_meta_id ORDER BY A.id",
-            |mut row| {
-                (
-                    row.take::<u32, usize>(0).unwrap(),
-                    row.take::<u32, usize>(1).unwrap(),
-                    row.take::<u64, usize>(2).unwrap(),
-                    row.take_opt::<u64, usize>(3).unwrap().ok(),
-                    row.take_opt::<u64, usize>(4).unwrap().ok(),
-                    row.take::<u16, usize>(5).unwrap(),
-                    row.take::<u8, usize>(6).unwrap().to_winner(),
-                    row.take::<u32, usize>(7).unwrap(),
-                    row.take::<u32, usize>(8).unwrap(),
-                    row.take::<i32, usize>(9).unwrap(),
-                    row.take::<i32, usize>(10).unwrap(),
-                    row.take::<u32, usize>(11).unwrap(),
-                    row.take::<u32, usize>(12).unwrap(),
-                    row.take::<u8, usize>(13).unwrap(),
-                    row.take::<u32, usize>(14).unwrap(),
-                    row.take::<bool, usize>(15).unwrap(),
-                )
-            },
-            params.clone(),
-        )
-        .into_iter()
-        .for_each(
-            |(instance_meta_id, server_id, start_ts, end_ts, expired, map_id, winner, team_id1, team_id2, team1_change, team2_change, uploaded_user, upload_id, privacy_type, privacy_ref, updated_specs)| {
-                instance_metas.1.insert(
-                    instance_meta_id,
-                    InstanceMeta {
-                        instance_meta_id,
-                        server_id,
-                        start_ts,
-                        end_ts,
-                        map_id,
-                        expired,
-                        participants: Vec::new(),
-                        instance_specific: MetaType::RatedArena {
-                            winner,
-                            team1: armory.get_arena_team_by_id(db_main, team_id1).expect("Foreign key constraint"),
-                            team2: armory.get_arena_team_by_id(db_main, team_id2).expect("Foreign key constraint"),
-                            team1_change,
-                            team2_change,
-                        },
-                        uploaded_user,
-                        upload_id,
-                        privacy_type: PrivacyType::new(privacy_type, privacy_ref),
-                        updated_specs,
-                    },
-                );
-            },
-        );
-
-    // Skirmishes
-    db_main
-        .select_wparams(
-            "SELECT A.id, A.server_id, A.start_ts, A.end_ts, A.expired, A.map_id, B.winner, C.member_id, A.upload_id, A.privacy_type, A.privacy_ref, A.updated_specs FROM instance_meta A JOIN instance_skirmish B ON A.id = B.instance_meta_id JOIN \
-             instance_uploads C ON A.upload_id = C.id WHERE A.id > :saved_instance_meta_id ORDER BY A.id",
-            |mut row| InstanceMeta {
-                instance_meta_id: row.take(0).unwrap(),
-                server_id: row.take(1).unwrap(),
-                start_ts: row.take(2).unwrap(),
-                end_ts: row.take_opt(3).unwrap().ok(),
-                expired: row.take_opt(4).unwrap().ok(),
-                map_id: row.take(5).unwrap(),
-                participants: Vec::new(),
-                instance_specific: MetaType::Skirmish {
-                    winner: row.take::<u8, usize>(6).unwrap().to_winner(),
-                },
-                uploaded_user: row.take(7).unwrap(),
-                upload_id: row.take(8).unwrap(),
-                privacy_type: PrivacyType::new(row.take(9).unwrap(), row.take(10).unwrap()),
-                updated_specs: row.take(11).unwrap(),
-            },
-            params.clone(),
-        )
-        .into_iter()
-        .for_each(|result| {
-            instance_metas.1.insert(result.instance_meta_id, result);
-        });
-
-    // Battlegrounds
-    db_main
-        .select_wparams(
-            "SELECT A.id, A.server_id, A.start_ts, A.end_ts, A.expired, A.map_id, B.winner, B.score_alliance, B.score_horde, C.member_id, A.upload_id, A.privacy_type, A.privacy_ref, A.updated_specs FROM instance_meta A JOIN instance_battleground B \
-             ON A.id = B.instance_meta_id JOIN instance_uploads C ON A.upload_id = C.id WHERE A.id > :saved_instance_meta_id ORDER BY A.id",
-            |mut row| InstanceMeta {
-                instance_meta_id: row.take(0).unwrap(),
-                server_id: row.take(1).unwrap(),
-                start_ts: row.take(2).unwrap(),
-                end_ts: row.take_opt(3).unwrap().ok(),
-                expired: row.take_opt(4).unwrap().ok(),
-                map_id: row.take(5).unwrap(),
-                participants: Vec::new(),
-                instance_specific: MetaType::Battleground {
-                    winner: row.take::<u8, usize>(6).unwrap().to_winner(),
-                    score_alliance: row.take(7).unwrap(),
-                    score_horde: row.take(8).unwrap(),
-                },
-                uploaded_user: row.take(9).unwrap(),
-                upload_id: row.take(10).unwrap(),
-                privacy_type: PrivacyType::new(row.take(11).unwrap(), row.take(12).unwrap()),
-                updated_specs: row.take(13).unwrap(),
-            },
-            params.clone(),
-        )
-        .into_iter()
-        .for_each(|result| {
             instance_metas.1.insert(result.instance_meta_id, result);
         });
 

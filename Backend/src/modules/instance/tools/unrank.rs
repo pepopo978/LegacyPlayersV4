@@ -2,7 +2,6 @@ use crate::modules::instance::dto::InstanceFailure;
 use crate::modules::instance::Instance;
 use crate::params;
 use crate::util::database::Execute;
-use std::collections::HashMap;
 
 pub trait UnrankAttempt {
     fn unrank_attempt(&self, db_main: &mut impl Execute, attempt_id: u32) -> Result<(), InstanceFailure>;
@@ -34,21 +33,6 @@ impl UnrankAttempt for Instance {
             if let Some(index) = speed_kills.iter().position(|speed_kill| speed_kill.attempt_id == attempt_id) {
                 speed_kills.remove(index);
             }
-        }
-
-        {
-            let mut instance_rankings_dps = self.instance_rankings_dps.write().unwrap();
-            *instance_rankings_dps = (0, HashMap::new());
-        }
-
-        {
-            let mut instance_rankings_hps = self.instance_rankings_hps.write().unwrap();
-            *instance_rankings_hps = (0, HashMap::new());
-        }
-
-        {
-            let mut instance_rankings_tps = self.instance_rankings_tps.write().unwrap();
-            *instance_rankings_tps = (0, HashMap::new());
         }
 
         Ok(())

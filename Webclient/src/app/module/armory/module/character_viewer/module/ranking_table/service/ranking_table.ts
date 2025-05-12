@@ -25,7 +25,6 @@ export class RankingTableService implements OnDestroy {
 
     private dps_rankings: Array<[number, Array<[number, RankingCharacterMeta, Array<RankingResult>]>]> = [];
     private hps_rankings: Array<[number, Array<[number, RankingCharacterMeta, Array<RankingResult>]>]> = [];
-    private tps_rankings: Array<[number, Array<[number, RankingCharacterMeta, Array<RankingResult>]>]> = [];
 
     private current_character_id: number = 0;
     private current_server_id: number = 0;
@@ -39,10 +38,6 @@ export class RankingTableService implements OnDestroy {
         }));
         this.subscription.add(this.rankingService.all_hps_rankings.subscribe(rankings => {
             this.hps_rankings = rankings;
-            this.commit();
-        }));
-        this.subscription.add(this.rankingService.all_tps_rankings.subscribe(rankings => {
-            this.tps_rankings = rankings;
             this.commit();
         }));
     }
@@ -77,17 +72,6 @@ export class RankingTableService implements OnDestroy {
                     if (!encounter_results.has(key))
                         encounter_results.set(key, [[encounter_id, difficulty_id], [undefined, undefined, undefined]]);
                     encounter_results.get(key)[1][1] = this.process_char_results(char_results.map(([a, b, rankings]) =>
-                        [a, b, rankings.filter(ranking => ranking.difficulty_id === difficulty_id)]));
-                }
-            }
-        });
-        this.tps_rankings.forEach(([encounter_id, char_results]) => {
-            for (const difficulty_id of [3, 4, 5, 6, 9, 148]) {
-                if (char_results.some(([a, b, rankings]) => rankings.some(ranking => ranking.difficulty_id === difficulty_id))) {
-                    const key = encounter_id.toString() + "," + difficulty_id.toString();
-                    if (!encounter_results.has(key))
-                        encounter_results.set(key, [[encounter_id, difficulty_id], [undefined, undefined, undefined]]);
-                    encounter_results.get(key)[1][2] = this.process_char_results(char_results.map(([a, b, rankings]) =>
                         [a, b, rankings.filter(ranking => ranking.difficulty_id === difficulty_id)]));
                 }
             }

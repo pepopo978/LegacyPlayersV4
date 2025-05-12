@@ -1,17 +1,22 @@
+use serde::{Deserialize, Serialize};
+use rocket_okapi::JsonSchema;
+use crate::modules::instance::dto::RankingResultMeta;
+
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct RankingResult {
-    #[serde(rename = "a")]
+    pub id: u32,
+    pub encounter_id: u32,
+    pub server_id: u32,
+    pub character_id: u32,
+    pub character_name: String,
+    pub hero_class_id: u8,
     pub instance_meta_id: u32,
-    #[serde(rename = "b")]
     pub attempt_id: u32,
-    #[serde(rename = "c")]
     pub amount: u32,
-    #[serde(rename = "d")]
     pub duration: u64,
-    #[serde(rename = "e")]
     pub difficulty_id: u8,
-    #[serde(rename = "f")]
     pub character_spec: u8,
-    #[serde(rename = "g")]
-    pub season_index: u8
+    pub season_index: u8,
+
+    pub ranking_result: RankingResultMeta,
 }
