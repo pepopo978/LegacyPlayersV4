@@ -1,5 +1,5 @@
 <!-- AUTO-GENERATED, DO NOT EDIT! -->
-<!-- Please edit the original at https://github.com/Legacy-Players/LegacyPlayersV4/meta/blob/master/templates/repository/common/SECURITY.md -->
+<!-- Please edit the original at https://github.com/pepopo978/LegacyPlayersV4/meta/blob/master/templates/repository/common/SECURITY.md -->
 
 <!-- START doctoc generated TOC please keep comment here to allow auto update -->
 <!-- DON'T EDIT THIS SECTION, INSTEAD RE-RUN doctoc TO UPDATE -->
