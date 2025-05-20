@@ -1,12 +1,10 @@
-use std::collections::HashMap;
-
 use chrono::NaiveDateTime;
 use regex::Regex;
 
 use crate::modules::armory::domain_value::GuildRank;
 use crate::modules::armory::dto::{CharacterDto, CharacterGearDto, CharacterGuildDto, CharacterHistoryDto, CharacterInfoDto, CharacterItemDto, GuildDto};
 use crate::modules::data::Data;
-use crate::modules::data::tools::{RetrieveMap, RetrieveNPC};
+use crate::modules::data::tools::{RetrieveMap};
 use crate::modules::live_data_processor::domain_value::{HitType, School};
 use crate::modules::live_data_processor::dto::{AuraApplication, DamageComponent, DamageDone, Death, HealDone, InstanceMap, Interrupt, Loot, Message, MessageType, SpellCast, Summon, UnAura, Unit};
 use crate::modules::live_data_processor::material::{ActiveMapVec, Participant, WoWVanillaParser};
@@ -15,7 +13,6 @@ use crate::modules::live_data_processor::tools::cbl_parser::wow_vanilla::hashed_
 use crate::modules::live_data_processor::tools::cbl_parser::wow_vanilla::parse_spell_args::parse_spell_args;
 use crate::modules::live_data_processor::tools::cbl_parser::wow_vanilla::parse_trailer::parse_trailer;
 use crate::modules::live_data_processor::tools::cbl_parser::wow_vanilla::parse_unit::parse_unit;
-use crate::modules::live_data_processor::tools::GUID;
 use crate::modules::armory::tools::strip_talent_specialization;
 /*
 
@@ -1421,42 +1418,7 @@ impl CombatLogParser for WoWVanillaParser {
         None
     }
 
-    fn do_message_post_processing(&mut self, data: &Data, messages: &mut Vec<Message>) {
-        // Correct pet unit ids
-        for message in messages.iter_mut() {
-            match &mut message.message_type {
-                MessageType::MeleeDamage(damage_done) | MessageType::SpellDamage(damage_done) => {
-                    correct_pet_unit(data, &mut damage_done.attacker, &self.pet_owner);
-                    correct_pet_unit(data, &mut damage_done.victim, &self.pet_owner);
-                }
-                MessageType::InstanceMap(instance_map) => correct_pet_unit(data, &mut instance_map.unit, &self.pet_owner),
-                MessageType::Interrupt(interrupt) => correct_pet_unit(data, &mut interrupt.target, &self.pet_owner),
-                MessageType::Dispel(dispel) => correct_pet_unit(data, &mut dispel.target, &self.pet_owner),
-                MessageType::SpellSteal(spell_steal) => {
-                    correct_pet_unit(data, &mut spell_steal.un_aura_caster, &self.pet_owner);
-                    correct_pet_unit(data, &mut spell_steal.target, &self.pet_owner);
-                }
-                MessageType::SpellCast(spell_cast) => {
-                    correct_pet_unit(data, &mut spell_cast.caster, &self.pet_owner);
-                    if let Some(target) = spell_cast.target.as_mut() {
-                        correct_pet_unit(data, target, &self.pet_owner);
-                    }
-                }
-                MessageType::AuraApplication(aura_app) => correct_pet_unit(data, &mut aura_app.target, &self.pet_owner),
-                MessageType::Heal(heal) => {
-                    correct_pet_unit(data, &mut heal.caster, &self.pet_owner);
-                    correct_pet_unit(data, &mut heal.target, &self.pet_owner);
-                }
-                MessageType::Death(death) => {
-                    correct_pet_unit(data, &mut death.victim, &self.pet_owner);
-                    if let Some(cause) = death.cause.as_mut() {
-                        correct_pet_unit(data, cause, &self.pet_owner);
-                    }
-                }
-                _ => {}
-            };
-        }
-
+    fn do_message_post_processing(&mut self, _data: &Data, messages: &mut Vec<Message>) {
         // And create pet summon events
         let mut summon_events: Vec<Message> = Vec::with_capacity(40);
         for (pet_unit_id, owner_unit_id) in self.pet_owner.iter() {
@@ -1467,7 +1429,7 @@ impl CombatLogParser for WoWVanillaParser {
                     owner: Unit { is_player: true, unit_id: *owner_unit_id, is_self_damage: false, is_mind_control: false },
                     unit: Unit {
                         is_player: false,
-                        unit_id: 0xF14000FFFF000000 + (*pet_unit_id & 0x0000000000FFFFFF),
+                        unit_id: *pet_unit_id,
                         is_self_damage: false,
                         is_mind_control: false,
                     },
@@ -1740,16 +1702,6 @@ fn create_character_item_dto(item: &Option<(u32, Option<u32>, Option<Vec<Option<
     })
 }
 
-fn correct_pet_unit(data: &Data, unit: &mut Unit, pet_owner: &HashMap<u64, u64>) {
-    if pet_owner.contains_key(&unit.unit_id) {
-        if let Some(entry) = unit.unit_id.get_entry() {
-            if let Some(npc) = data.get_npc(1, entry) {
-                if npc.map_id.is_some() {
-                    return;
-                }
-            }
-        }
-        unit.unit_id = 0xF14000FFFF000000 + (unit.unit_id | 0x0000000000FFFFFF);
-        unit.is_player = false;
-    }
-}
+// fn correct_pet_unit(data: &Data, unit: &mut Unit, pet_owner: &HashMap<u64, u64>) {
+    // this function didn't seem to work correctly all the time and I'm not sure is necessary
+// }
