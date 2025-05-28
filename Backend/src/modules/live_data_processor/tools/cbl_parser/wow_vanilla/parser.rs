@@ -10,7 +10,7 @@ use crate::modules::live_data_processor::dto::{AuraApplication, DamageComponent,
 use crate::modules::live_data_processor::material::{ActiveMapVec, Participant, WoWVanillaParser};
 use crate::modules::live_data_processor::tools::cbl_parser::CombatLogParser;
 use crate::modules::live_data_processor::tools::cbl_parser::wow_vanilla::hashed_unit_id::get_hashed_player_unit_id;
-use crate::modules::live_data_processor::tools::cbl_parser::wow_vanilla::parse_spell_args::parse_spell_args;
+use crate::modules::live_data_processor::tools::cbl_parser::wow_vanilla::parse_spell_args::{parse_spell_args, parse_spell_args_periodic};
 use crate::modules::live_data_processor::tools::cbl_parser::wow_vanilla::parse_trailer::parse_trailer;
 use crate::modules::live_data_processor::tools::cbl_parser::wow_vanilla::parse_unit::parse_unit;
 use crate::modules::armory::tools::strip_talent_specialization;
@@ -471,7 +471,7 @@ impl CombatLogParser for WoWVanillaParser {
             };
 
             let spell_name = captures.get(5)?.as_str();
-            let spell_id = parse_spell_args(&mut self.cache_spell_id, data, spell_name)?;
+            let spell_id = parse_spell_args_periodic(&mut self.cache_spell_id, data, spell_name)?;
 
             let mut attacker_capture = captures.get(4)?.as_str().to_string();
 
