@@ -3,7 +3,7 @@ use crate::modules::live_data_processor::domain_value::Unit;
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct Creature {
     pub creature_id: u64,
-    pub entry: u32,
+    pub encounter_npc_id: u32,
     pub owner: Option<Box<Unit>>,
 }
 

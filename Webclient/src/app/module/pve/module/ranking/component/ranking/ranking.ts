@@ -92,7 +92,7 @@ export class RankingComponent implements OnInit, OnDestroy {
             id: -6,
             label: "Naxxramas - All",
             list_selection_callback: (button, selected_list, current_list, checked) =>
-                this.uncheck_if_all_check_else([43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54, 55, 56, 57], selected_list, current_list)
+                this.uncheck_if_all_check_else([43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 55, 56, 57], selected_list, current_list)
         },
         {
             id: -7,

@@ -10,9 +10,9 @@ impl LiveDataDeserializer for Player {
 impl LiveDataDeserializer for Creature {
     fn deserialize(&self) -> String {
         if let Some(owner) = &self.owner {
-            return format!("[0,{},{},{}]", self.creature_id, self.entry, owner.deserialize());
+            return format!("[0,{},{},{}]", self.creature_id, self.encounter_npc_id, owner.deserialize());
         }
-        format!("[0,{},{}]", self.creature_id, self.entry)
+        format!("[0,{},{}]", self.creature_id, self.encounter_npc_id)
     }
 }
 

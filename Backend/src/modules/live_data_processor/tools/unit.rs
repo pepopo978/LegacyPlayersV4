@@ -35,7 +35,7 @@ impl MapUnit for dto::Unit {
             // Dont cache, because an owner could be found at a later time
             let unit = domain_value::Unit::Creature(domain_value::Creature {
                 creature_id: self.unit_id,
-                entry: self.unit_id.get_entry().ok_or(LiveDataProcessorFailure::InvalidInput)?,
+                encounter_npc_id: self.unit_id.get_entry().ok_or(LiveDataProcessorFailure::InvalidInput)?,
                 owner: summons.get(&self.unit_id).cloned().map(Box::new),
             });
             Ok(unit)

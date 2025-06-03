@@ -1204,7 +1204,8 @@ impl CombatLogParser for WoWVanillaParser {
          * Unit Death
          */
         if let Some(captures) = RE_UNIT_DIE_DESTROYED.captures(&content) {
-            let victim = parse_unit(&mut self.cache_unit, data, captures.get(1)?.as_str())?;
+            let unit_name = captures.get(1)?.as_str();
+            let victim = parse_unit(&mut self.cache_unit, data, unit_name)?;
             self.collect_participant(&victim, captures.get(1)?.as_str(), event_ts);
             self.collect_active_map(data, &victim, event_ts);
             return Some(vec![MessageType::Death(Death { cause: None, victim })]);
@@ -1617,50 +1618,49 @@ impl CombatLogParser for WoWVanillaParser {
 
     fn get_npc_appearance_offset(&self, entry: u32) -> Option<i64> {
         Some(match entry {
-            15990 => -228000,
-            12435 => -300000,
-            11583 => -180000,
+            15990 => -300000, // Kel'Thuzad
+            12435 => -300000, // Razorgore the Untamed
+            11583 => -180000, // Nefarian
             65534 => -3000,
-            // Thaddius
-            15928 => -30000,
+            15928 => -30000, // Thaddius
+            15727 => -180000, // C'Thun
             _ => return None,
         })
     }
 
     fn get_npc_timeout(&self, entry: u32) -> Option<u64> {
         Some(match entry {
-            65534 => 90000,
-            15990 => 180000,
-            // Thaddius
-            15928 => 80000,
-            // Viscidius
-            15299 => 80000,
-            // Nefarian
-            11583 => 120000,
-            // Gothik the Harvester
-            16060 => 80000,
+            15990 => 180000, // Kel'Thuzad
+            15928 => 80000,  // Thaddius
+            15299 => 80000, // Viscidius
+            11583 => 120000, // Nefarian
+            16060 => 80000, // Gothik the Harvester
+            15589 => 180000, // Eye of C'Thun
+            15727 => 180000, // C'Thun
             _ => return None,
         })
     }
 
     fn get_death_implied_npc_combat_state_and_offset(&self, entry: u32) -> Option<Vec<(u32, i64, i64)>> {
         Some(match entry {
-            15929 | 15930 => vec![(15928, -1000, 180000)],
-            16427 | 16428 | 16429 => vec![(65534, 0, 180000)],
-            12557 | 14456 | 12416 | 12422 | 12420 => vec![(12435, 0, 240000)],
-            14261 | 14262 | 14263 | 14264 | 14265 => vec![(11583, 0, 180000)],
+            15929 | 15930 => vec![(15928, -1000, 300000)],   // Stalagg and Feugen -> Thaddius
+            16427 | 16428 | 16429 => vec![(15990, 0, 500000)],   // KT phase 1 adds  Soldier of the Frozen Wastes, Unstoppable Abomination, Soul Weaver -> Kel'Thuzad
+            12557 | 14456 | 12416 | 12422 | 12420 => vec![(12435, 0, 240000)],  // Razorgore adds  Blackwing Legionnaire, Blackwing Mage, Death Talon Dragonspawn, Grethok the Controller, Blackwing Guardsman -> Razorgore the Untamed
+            14261 | 14262 | 14263 | 14264 | 14265 | 14302 => vec![(11583, 0, 300000)],  // Nef adds Blue Drakonid, Green Drakonid, Bronze Drakonid, Red Drakonid, Black Drakonid, Chromatic Drakonid -> Nefarian
+            15589  => vec![(15727, 0, 300000)],  // Eye of C'Thun -> C'Thun
             _ => return None,
         })
     }
 
     fn get_in_combat_implied_npc_combat(&self, entry: u32) -> Option<Vec<u32>> {
         Some(match entry {
-            16124 | 16125 | 16126 | 16127 | 16148 | 16149 | 16150 => vec![16060],
-            12557 | 14456 | 12416 | 12422 | 12420 => vec![12435],
-            16427 | 16429 | 16428 => vec![65534],
-            15667 => vec![15299],
-            // Nefarian
-            14261 | 14262 | 14263 | 14264 | 14265 | 10162 | 10163 => vec![11583],
+            16124 | 16125 | 16126 | 16127 | 16148 | 16149 | 16150 => vec![16060],  // Gothik adds Unrelenting Trainee, Unrelenting Death Knight, Unrelenting Rider, Spectral Trainee, Spectral Death Knight, Spectral Horse, Spectral Rider
+            12557 | 14456 | 12416 | 12422 | 12420 => vec![12435], // Razorgore adds  Blackwing Legionnaire, Blackwing Mage, Death Talon Dragonspawn, Grethok the Controller, Blackwing Guardsman
+            16427 | 16428 | 16429 => vec![15990], // KT phase 1 adds  Soldier of the Frozen Wastes, Unstoppable Abomination, Soul Weaver -> Kel'Thuzad
+            15667 => vec![15299],  // Glob of Viscidus -> Viscidus
+            14261 | 14262 | 14263 | 14264 | 14265 | 10162 | 10163 | 14302 => vec![11583],  // Nef adds Blue Drakonid, Green Drakonid, Bronze Drakonid, Red Drakonid, Black Drakonid, Lord Victor Nefarius, Chromatic Drakonid -> Nefarian
+            15589 | 15334 | 15728 | 15726  => vec![15727],  // C'Thun adds Eye of C'Thun, Giant Eye Tentacle, Giant Claw Tentacle, Eye Tentacle -> C'Thun
+
             _ => return None,
         })
     }

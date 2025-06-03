@@ -54,7 +54,7 @@ export class UploadComponent implements OnDestroy, OnInit {
             }
         });
 
-        setInterval(() => this.poll_progress(), 1000);
+        setInterval(() => this.poll_progress(), 5000);
     }
 
     ngOnInit(): void {
