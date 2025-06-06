@@ -1618,7 +1618,7 @@ impl CombatLogParser for WoWVanillaParser {
 
     fn get_npc_appearance_offset(&self, entry: u32) -> Option<i64> {
         Some(match entry {
-            15990 => -300000, // Kel'Thuzad
+            15990 => -228000, // Kel'Thuzad
             12435 => -300000, // Razorgore the Untamed
             11583 => -180000, // Nefarian
             65534 => -3000,
@@ -1644,7 +1644,7 @@ impl CombatLogParser for WoWVanillaParser {
     fn get_death_implied_npc_combat_state_and_offset(&self, entry: u32) -> Option<Vec<(u32, i64, i64)>> {
         Some(match entry {
             15929 | 15930 => vec![(15928, -1000, 300000)],   // Stalagg and Feugen -> Thaddius
-            16427 | 16428 | 16429 => vec![(15990, 0, 500000)],   // KT phase 1 adds  Soldier of the Frozen Wastes, Unstoppable Abomination, Soul Weaver -> Kel'Thuzad
+            // 16427 | 16428 | 16429 => vec![(15990, 0, 500000)],   // KT phase 1 adds  Soldier of the Frozen Wastes, Unstoppable Abomination, Soul Weaver -> Kel'Thuzad
             12557 | 14456 | 12416 | 12422 | 12420 => vec![(12435, 0, 240000)],  // Razorgore adds  Blackwing Legionnaire, Blackwing Mage, Death Talon Dragonspawn, Grethok the Controller, Blackwing Guardsman -> Razorgore the Untamed
             14261 | 14262 | 14263 | 14264 | 14265 | 14302 => vec![(11583, 0, 300000)],  // Nef adds Blue Drakonid, Green Drakonid, Bronze Drakonid, Red Drakonid, Black Drakonid, Chromatic Drakonid -> Nefarian
             15589  => vec![(15727, 0, 300000)],  // Eye of C'Thun -> C'Thun
@@ -1656,7 +1656,7 @@ impl CombatLogParser for WoWVanillaParser {
         Some(match entry {
             16124 | 16125 | 16126 | 16127 | 16148 | 16149 | 16150 => vec![16060],  // Gothik adds Unrelenting Trainee, Unrelenting Death Knight, Unrelenting Rider, Spectral Trainee, Spectral Death Knight, Spectral Horse, Spectral Rider
             12557 | 14456 | 12416 | 12422 | 12420 => vec![12435], // Razorgore adds  Blackwing Legionnaire, Blackwing Mage, Death Talon Dragonspawn, Grethok the Controller, Blackwing Guardsman
-            16427 | 16428 | 16429 => vec![15990], // KT phase 1 adds  Soldier of the Frozen Wastes, Unstoppable Abomination, Soul Weaver -> Kel'Thuzad
+            // 16427 | 16428 | 16429 => vec![15990], // KT phase 1 adds  Soldier of the Frozen Wastes, Unstoppable Abomination, Soul Weaver -> Kel'Thuzad
             15667 => vec![15299],  // Glob of Viscidus -> Viscidus
             14261 | 14262 | 14263 | 14264 | 14265 | 10162 | 10163 | 14302 => vec![11583],  // Nef adds Blue Drakonid, Green Drakonid, Bronze Drakonid, Red Drakonid, Black Drakonid, Lord Victor Nefarius, Chromatic Drakonid -> Nefarian
             15589 | 15334 | 15728 | 15726  => vec![15727],  // C'Thun adds Eye of C'Thun, Giant Eye Tentacle, Giant Claw Tentacle, Eye Tentacle -> C'Thun
