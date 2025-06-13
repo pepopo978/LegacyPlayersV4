@@ -86,7 +86,7 @@ export class RankingComponent implements OnInit, OnDestroy {
             id: -5,
             label: "Temple of Ahn'Qiraj",
             list_selection_callback: (button, selected_list, current_list, checked) =>
-                this.uncheck_if_all_check_else([36, 37, 38, 39, 40, 41, 42, 163, 164, 165], selected_list, current_list)
+                this.uncheck_if_all_check_else([36, 37, 38, 40, 41, 42, 163, 164, 165], selected_list, current_list)
         },
         {
             id: -6,
