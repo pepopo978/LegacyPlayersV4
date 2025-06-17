@@ -98,7 +98,7 @@ impl Server {
                                                 println!("{}: starting combat with {} for encounter {} attempt enc {}", event.timestamp, encounter_npc.npc_id, encounter_npc.encounter_id, attempt.encounter_id);
 
                                                 // add main boss to fights with starting add phases
-                                                // C'Thun(42), Nefarian(29), Razorgore(22), Thekal(17), Kel'Thuzad(57), Gothik(54), Thaddius(46)
+                                                // C'Thun(42), Nefarian(29), Razorgore(22), Thekal(17), Kel'Thuzad(57), Gothik(54), Thaddius(46), Ley-Watcher Incantagos(207)
                                                 if encounter_npc.encounter_id == 42
                                                     || encounter_npc.encounter_id == 29
                                                     || encounter_npc.encounter_id == 22
@@ -106,6 +106,7 @@ impl Server {
                                                     || encounter_npc.encounter_id == 57
                                                     || encounter_npc.encounter_id == 54
                                                     || encounter_npc.encounter_id == 46
+                                                    || encounter_npc.encounter_id == 207
                                                 {
                                                     // add required death creatures
                                                     let required_death_creature_ids = data.get_required_death_creature_ids(encounter_npc.encounter_id);
