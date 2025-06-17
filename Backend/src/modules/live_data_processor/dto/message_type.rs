@@ -1,5 +1,5 @@
 use crate::modules::live_data_processor::dto::{
-    AuraApplication, CombatState, DamageDone, Death, Event, HealDone, InstanceArena, InstanceBattleground, InstanceMap, InstanceStart, InstanceStartRatedArena, InstanceUnratedArena, Interrupt, Loot, Position, Power, SpellCast, Summon, Threat,
+    AuraApplication, CombatState, DamageDone, Death, Event, HealDone, InstanceArena, InstanceBattleground, InstanceMap, InstanceStart, InstanceStartRatedArena, InstanceUnratedArena, Interrupt, Loot, PlayersInCombat, Position, Power, SpellCast, Summon, Threat,
     UnAura, Unit,
 };
 
@@ -31,7 +31,8 @@ pub enum MessageType {
     InstanceMap(InstanceMap),
     EncounterStart(u32),
     EncounterEnd(u32),
-    SpellCastAttempt(SpellCast)
+    SpellCastAttempt(SpellCast),
+    PercentPlayersInCombat(PlayersInCombat),
 }
 
 impl MessageType {
@@ -57,6 +58,7 @@ impl MessageType {
             MessageType::Summon(item) => Some(item.unit.clone()),
             MessageType::Interrupt(item) => Some(item.target.clone()),
             MessageType::SpellCastAttempt(item) => Some(item.caster.clone()),
+            MessageType::PercentPlayersInCombat(item) => Some(item.unit.clone()),
 
             // TODO!
             _ => None,

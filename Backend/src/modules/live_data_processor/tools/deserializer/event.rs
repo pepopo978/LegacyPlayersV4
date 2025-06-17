@@ -199,6 +199,7 @@ impl EventTypeDeserializer for EventType {
                 };
                 format!("{},{},{},{},{},{},{}", cause_event.id, subject.deserialize(), threat.threatened.deserialize(), spell_id, hit_mask, school_mask, threat.amount)
             },
+            EventType::PercentPlayersInCombat { percentage } => format!("{}", percentage),
             EventType::PlaceHolder => "?!?".to_owned(),
         }
     }

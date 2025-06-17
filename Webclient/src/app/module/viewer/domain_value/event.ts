@@ -2,7 +2,7 @@ import {Unit} from "./unit";
 import {SpellComponent} from "./damage";
 
 export type Event = SpellCast | Death | CombatState | Loot | Position | Power | AuraApplication
-    | Interrupt | UnAura | ThreatWipe | Summon | MeleeDamage | SpellDamage | Heal | Threat;
+    | Interrupt | UnAura | ThreatWipe | Summon | MeleeDamage | SpellDamage | Heal | Threat | PercentPlayersInCombat;
 
 // Always: Id, TS, Event
 // Source, Target, SpellId, HitMask, School
@@ -25,3 +25,4 @@ export type SpellDamage = [number, number, number, Unit, Unit, number, number, A
 export type Heal = [number, number, number, Unit, Unit, number, number, number, number, number, number, number, number];
 // cause_event_id, source, target, spell_id, hit_mask, school_mask, amount
 export type Threat = [number, number, number, Unit, Unit, number, number, number, number];
+export type PercentPlayersInCombat = [number, number, Unit, number];

@@ -3,7 +3,7 @@ use std::collections::{BTreeSet, HashMap, VecDeque};
 
 use chrono::{Datelike, Duration, NaiveDateTime, Utc};
 
-use crate::modules::armory::tools::{SetCharacter};
+use crate::modules::armory::tools::SetCharacter;
 use crate::modules::armory::Armory;
 use crate::modules::data::tools::{RetrieveNPC, RetrieveServer, RetrieveSpell};
 use crate::modules::data::Data;
@@ -22,7 +22,9 @@ pub fn parse_cbl(
 
     let mut combat_started_once = false;
 
-    let combat_ignore_spells = ["Distract", "Hunter's Mark", "Calm Elements", "Mind Soothe", "Mind Control", "Mind Vision", "Enlighten", "Bloodrage"];
+    let mut has_players_in_combat_info = false;
+
+    let combat_ignore_spells = ["Distract", "Hunter's Mark", "Calm Elements", "Mind Soothe", "Mind Control", "Mind Vision", "Enlighten", "Bloodrage", "Acid Spit"];
 
     let combat_ignore_units = [
         get_npc_unit_id(data, "Rat").unwrap(),
@@ -99,6 +101,13 @@ pub fn parse_cbl(
                                     15439 | 15430 => ts_offset = 50,
                                     _ => {},
                                 };
+                            }
+                        }
+
+                        // check if players in combat messages exist
+                        if !has_players_in_combat_info {
+                            if let MessageType::PercentPlayersInCombat(_) = &message_type {
+                                has_players_in_combat_info = true;
                             }
                         }
 
@@ -367,7 +376,7 @@ pub fn parse_cbl(
 
         // Insert Combat Start/End Events
         // We assume CBT Start when we see it doing sth
-        // We assume end if it dies or after a timeout
+        // We assume end if it dies or after a timeout or if we have PLAYERS_IN_COMBAT info
         match message_type {
             MessageType::SpellCast(cast) => {
                 if !cast.caster.is_player {

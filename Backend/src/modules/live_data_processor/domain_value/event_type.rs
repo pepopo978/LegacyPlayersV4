@@ -19,6 +19,7 @@ pub enum EventType {
     SpellDamage { spell_cause: Box<Event>, damage: Damage },
     Heal { spell_cause: Box<Event>, heal: Heal },
     Threat { cause_event: Box<Event>, threat: Threat },
+    PercentPlayersInCombat { percentage: u32 },
 
     // Used for convenience
     PlaceHolder,
@@ -43,6 +44,8 @@ impl EventType {
             EventType::SpellDamage { .. } => 13,
             EventType::Heal { .. } => 14,
             EventType::Threat { .. } => 15,
+            EventType::PercentPlayersInCombat { .. } => 16,
+            
             EventType::PlaceHolder => 255,
         }
     }

@@ -11,8 +11,8 @@ use crate::modules::armory::tools::GetArenaTeam;
 use crate::modules::armory::Armory;
 use crate::modules::data::tools::RetrieveSpell;
 use crate::modules::data::Data;
-use crate::modules::live_data_processor::domain_value::{hit_mask_from_u32, school_mask_from_u8, AuraApplication, Event, EventParseFailureAction, EventType, Mitigation, Position, Power, PowerType, School, SpellComponent, Unit, UnitInstance};
-use crate::modules::live_data_processor::dto::{get_damage_components_total, CombatState, Death, Loot, Summon};
+use crate::modules::live_data_processor::domain_value::{hit_mask_from_u32, school_mask_from_u8, AuraApplication, Creature, Event, EventParseFailureAction, EventType, Mitigation, Position, Power, PowerType, School, SpellComponent, Unit, UnitInstance};
+use crate::modules::live_data_processor::dto::{get_damage_components_total, CombatState, Death, Loot, PlayersInCombat, Summon};
 use crate::modules::live_data_processor::dto::{LiveDataProcessorFailure, Message, MessageType};
 use crate::modules::live_data_processor::material::Server;
 use crate::modules::live_data_processor::tools::server::{try_parse_dispel, try_parse_interrupt, try_parse_spell_steal};
@@ -51,6 +51,10 @@ impl Server {
                 self.subject_prepend_mode_set.remove(&unit_dto.unit_id);
             } else {
                 non_committed_events.push_back(message);
+            }
+        } else {
+            if matches!(message.message_type, MessageType::Death(_)) {
+                println!("No subject found for message: {:?}", message);
             }
         }
     }
@@ -146,6 +150,14 @@ impl Server {
             MessageType::CombatState(CombatState { unit: unit_dto, in_combat }) => {
                 let subject = unit_dto.to_unit_add_implicit(&mut self.cache_unit, db_main, armory, self.server_id, &self.summons).map_err(|_| EventParseFailureAction::DiscardFirst);
                 Ok(Event::new(first_message.message_count, first_message.timestamp, subject?, EventType::CombatState { in_combat }))
+            },
+            MessageType::PercentPlayersInCombat(PlayersInCombat {unit: _unit, percentage}) => {
+                Ok(Event::new(
+                    first_message.message_count,
+                    first_message.timestamp,
+                    Unit::Creature(Creature { creature_id: 0, encounter_npc_id: 0, owner: None }), // dummy unit
+                    EventType::PercentPlayersInCombat { percentage },
+                ))
             },
             MessageType::Loot(Loot { unit: unit_dto, item_id, count }) => Ok(Event::new(
                 first_message.message_count,

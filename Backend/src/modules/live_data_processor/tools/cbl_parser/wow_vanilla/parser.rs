@@ -6,7 +6,7 @@ use crate::modules::armory::dto::{CharacterDto, CharacterGearDto, CharacterGuild
 use crate::modules::data::Data;
 use crate::modules::data::tools::{RetrieveMap};
 use crate::modules::live_data_processor::domain_value::{HitType, School};
-use crate::modules::live_data_processor::dto::{AuraApplication, DamageComponent, DamageDone, Death, HealDone, InstanceMap, Interrupt, Loot, Message, MessageType, SpellCast, Summon, UnAura, Unit};
+use crate::modules::live_data_processor::dto::{AuraApplication, DamageComponent, DamageDone, Death, HealDone, InstanceMap, Interrupt, Loot, Message, MessageType, PlayersInCombat, SpellCast, Summon, UnAura, Unit};
 use crate::modules::live_data_processor::material::{ActiveMapVec, Participant, WoWVanillaParser};
 use crate::modules::live_data_processor::tools::cbl_parser::CombatLogParser;
 use crate::modules::live_data_processor::tools::cbl_parser::wow_vanilla::hashed_unit_id::get_hashed_player_unit_id;
@@ -276,6 +276,8 @@ impl CombatLogParser for WoWVanillaParser {
             static ref RE_ZONE_INFO: Regex = Regex::new(r"ZONE_INFO: ([^&]+)&(.+[^\s])\&(\d+)").unwrap();
             static ref RE_LOOT: Regex = Regex::new(r"LOOT: ([^&]+)&(.+[^\s]) receives loot: \|c([a-zA-Z0-9]+)\|Hitem:(\d+):(\d+):(\d+):(\d+)\|h\[([a-zA-Z0-9\s']+)\]\|h\|rx(\d+)\.").unwrap();
 
+            static ref PLAYERS_IN_COMBAT: Regex = Regex::new(r"PLAYERS_IN_COMBAT: (\d+)/(\d+)").unwrap();
+            
             // Bugs?
             static ref RE_BUG_DAMAGE_SPELL_HIT_OR_CRIT: Regex = Regex::new(r"(.+[^\s])\s's (cr|h)its (.+[^\s]) for (\d+)\.\s?(.*)").unwrap();
         }
@@ -1219,6 +1221,18 @@ impl CombatLogParser for WoWVanillaParser {
             self.collect_active_map(data, &victim, event_ts);
             self.collect_active_map(data, &cause, event_ts);
             return Some(vec![MessageType::Death(Death { cause: Some(cause), victim })]);
+        }
+
+        if let Some(captures) = PLAYERS_IN_COMBAT.captures(&content) {
+            let in_combat = u32::from_str_radix(captures.get(1)?.as_str(), 10).ok()?;
+            let total = u32::from_str_radix(captures.get(2)?.as_str(), 10).ok()?;
+            if total > 0 {
+                let percent = (in_combat * 100) / total;
+                return Some(vec![MessageType::PercentPlayersInCombat(PlayersInCombat {
+                    unit: Default::default(),
+                    percentage: percent,
+                })]);
+            }
         }
 
         /*

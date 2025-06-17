@@ -59,10 +59,30 @@ impl Server {
      */
     fn extract_attempts_and_collect_ranking(&mut self, db_main: &mut (impl Execute + Select), data: &Data) {
         static KILL_MIN_INFIGHT_UNITS: usize = 5;
+
+        let mut has_percent_players_in_combat_events = false;
+        let mut previous_percent_players_in_combat: u32 = 0;
+
         for (instance_id, committed_events) in self.committed_events.iter() {
             if let Some(UnitInstance { instance_meta_id, .. }) = self.active_instances.get(&instance_id) {
                 let active_attempts = self.active_attempts.entry(*instance_id).or_insert_with(|| HashMap::with_capacity(1));
                 for event in committed_events.iter() {
+                    // if this is a percent players in combat event
+                    if let EventType::PercentPlayersInCombat { percentage } = &event.event {
+                        has_percent_players_in_combat_events = true;
+
+                        // combat has ended, commit attempt
+                        if *percentage == 0 && previous_percent_players_in_combat > 0 {
+                            for (_, mut attempt) in active_attempts.drain() {
+                                println!("{}: committing attempt for encounter {} due to PercentPlayersInCombat=0", event.timestamp, attempt.encounter_id);
+                                attempt.end_ts = event.timestamp;
+                                commit_attempt(db_main, *instance_meta_id, attempt);
+                            }
+                        }
+                        previous_percent_players_in_combat = *percentage;
+                        continue;
+                    }
+
                     match &event.subject {
                         Unit::Creature(Creature { creature_id, encounter_npc_id, owner: _ }) => {
                             if let Some(encounter_npc) = data.get_encounter_npc(*encounter_npc_id) {
@@ -79,7 +99,14 @@ impl Server {
 
                                                 // add main boss to fights with starting add phases
                                                 // C'Thun(42), Nefarian(29), Razorgore(22), Thekal(17), Kel'Thuzad(57), Gothik(54), Thaddius(46)
-                                                if encounter_npc.encounter_id == 42 || encounter_npc.encounter_id == 29 || encounter_npc.encounter_id == 22 || encounter_npc.encounter_id == 17 || encounter_npc.encounter_id == 57 || encounter_npc.encounter_id == 54 || encounter_npc.encounter_id == 46 {
+                                                if encounter_npc.encounter_id == 42
+                                                    || encounter_npc.encounter_id == 29
+                                                    || encounter_npc.encounter_id == 22
+                                                    || encounter_npc.encounter_id == 17
+                                                    || encounter_npc.encounter_id == 57
+                                                    || encounter_npc.encounter_id == 54
+                                                    || encounter_npc.encounter_id == 46
+                                                {
                                                     // add required death creatures
                                                     let required_death_creature_ids = data.get_required_death_creature_ids(encounter_npc.encounter_id);
                                                     for required_death_creature_id in required_death_creature_ids {
@@ -102,16 +129,24 @@ impl Server {
                                                 is_committable = ((attempt.creatures_in_combat.is_empty() && attempt.infight_player.len() <= KILL_MIN_INFIGHT_UNITS && attempt.infight_vehicle.len() <= KILL_MIN_INFIGHT_UNITS)
                                                     || attempt.pivot_creature.contains(creature_id))
                                                     && !(encounter_npc.requires_death
-                                                    && !attempt.creatures_required_to_die.is_empty()
-                                                    && attempt.creatures_required_to_die.contains(creature_id)
-                                                    && look_ahead_death(committed_events, event, *creature_id));
+                                                        && !attempt.creatures_required_to_die.is_empty()
+                                                        && attempt.creatures_required_to_die.contains(creature_id)
+                                                        && look_ahead_death(committed_events, event, *creature_id));
+                                            }
+
+                                            if has_percent_players_in_combat_events {
+                                                // don't commit attempts if we have has_percent_players_in_combat_events
+                                                continue;
                                             }
 
                                             if is_committable {
                                                 if let Some(mut attempt) = active_attempts.remove(&encounter_npc.encounter_id) {
                                                     let npc = data.get_npc(1, *encounter_npc_id).unwrap();
                                                     let name = data.get_localization(1, npc.localization_id).unwrap().content;
-                                                    println!("{}: combat timeout for {} name {} for encounter {} attempt enc {}", event.timestamp, encounter_npc.npc_id, name, encounter_npc.encounter_id, attempt.encounter_id);
+                                                    println!(
+                                                        "{}: combat timeout for {} name {} for encounter {} attempt enc {}",
+                                                        event.timestamp, encounter_npc.npc_id, name, encounter_npc.encounter_id, attempt.encounter_id
+                                                    );
 
                                                     attempt.end_ts = event.timestamp;
                                                     commit_attempt(db_main, *instance_meta_id, attempt);
@@ -123,21 +158,33 @@ impl Server {
                                         let mut is_committable = false;
                                         if let Some(attempt) = active_attempts.get_mut(&encounter_npc.encounter_id) {
                                             // attempt tracking
-                                            attempt.creatures_required_to_die.remove(creature_id);
+                                            let removed_id = attempt.creatures_required_to_die.remove(creature_id);
 
                                             attempt.last_creature_death = event.timestamp;
 
-                                            // Exception for Prophet skeram, may cause problems for vanilla
+                                            // Exception for Prophet skeram
                                             if attempt.pivot_creature.contains(creature_id) || *encounter_npc_id == 15263 {
                                                 attempt.pivot_is_finished = true;
                                                 attempt.creatures_required_to_die.clear();
-                                            }
 
-                                            is_committable = attempt.creatures_required_to_die.is_empty();
+                                                // let combat ending commit the attempt to avoid issues with clones
+                                                if has_percent_players_in_combat_events && *encounter_npc_id == 15263{
+                                                    is_committable = false;
+                                                } else {
+                                                    is_committable = attempt.creatures_required_to_die.is_empty();
+                                                }
+                                            } else {
+                                                is_committable = attempt.creatures_required_to_die.is_empty();
+                                            }
 
                                             let npc = data.get_npc(1, *encounter_npc_id).unwrap();
                                             let name = data.get_localization(1, npc.localization_id).unwrap().content;
-                                            println!("{}: combat death for creature {} name {} creatures_required_to_die {:?}", event.timestamp, creature_id, name, attempt.creatures_required_to_die);
+                                            if removed_id {
+                                                println!(
+                                                    "{}: required combat death for creature {} name {} creatures_required_to_die {:?}",
+                                                    event.timestamp, creature_id, name, attempt.creatures_required_to_die
+                                                );
+                                            }
                                         }
 
                                         if is_committable {
@@ -163,7 +210,10 @@ impl Server {
                                             if is_committable {
                                                 if let Some(mut attempt) = active_attempts.remove(&encounter_npc.encounter_id) {
                                                     attempt.end_ts = event.timestamp;
-                                                    println!("{}: pivot creature {} health threshold reached for encounter {} attempt enc {}", event.timestamp, creature_id, encounter_npc.encounter_id, attempt.encounter_id);
+                                                    println!(
+                                                        "{}: pivot creature {} health threshold reached for encounter {} attempt enc {}",
+                                                        event.timestamp, creature_id, encounter_npc.encounter_id, attempt.encounter_id
+                                                    );
                                                     commit_attempt(db_main, *instance_meta_id, attempt);
                                                 }
                                             }
@@ -184,13 +234,19 @@ impl Server {
                                         for (_encounter_id, attempt) in active_attempts.iter_mut() {
                                             attempt.infight_player.remove(&player.character_id);
                                         }
+
+                                        if has_percent_players_in_combat_events {
+                                            // don't rely on combat state for players for committing attempts if we have percent players in combat events
+                                            continue;
+                                        }
+
                                         // If enough player are OOC and Kill requirements are fulfilled
                                         for (encounter_id, attempt) in active_attempts.clone() {
                                             // C'Thun(42), Nefarian(29), Razorgore(22), Thekal(17), Kel'Thuzad(57), Gothik(54), Thaddius(46)
                                             if encounter_id == 42 || encounter_id == 29 || encounter_id == 22 || encounter_id == 17 || encounter_id == 57 || encounter_id == 54 || encounter_id == 46 {
                                                 // if it has been less than 30 seconds since the last creature death ignore this event
                                                 if event.timestamp - attempt.last_creature_death < 30000 {
-                                                    continue
+                                                    continue;
                                                 }
                                             }
 
@@ -226,6 +282,8 @@ impl Server {
                             };
                         },
                     }
+
+                    //
 
                     process_ranking(&event.subject, &event, data, active_attempts);
                 }
@@ -453,7 +511,10 @@ fn commit_attempt(db_main: &mut (impl Execute + Select), instance_meta_id: u32, 
         println!("{}: committing attempt for encounter {} as kill", attempt.end_ts, attempt.encounter_id);
     } else {
         // print mobs required to die
-        println!("{}: committing attempt for encounter {} as attempt, mobs required to die: {:?}", attempt.end_ts, attempt.encounter_id, attempt.creatures_required_to_die);
+        println!(
+            "{}: committing attempt for encounter {} as attempt, mobs required to die: {:?}",
+            attempt.end_ts, attempt.encounter_id, attempt.creatures_required_to_die
+        );
     }
 
     let encounter_id = attempt.hard_mode_encounter_id.unwrap_or(attempt.encounter_id);
