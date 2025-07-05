@@ -14,6 +14,7 @@ pub struct Server {
     // TODO: This grows uncontrollable
     // Key: (instance_id, member_id)
     pub active_instances: HashMap<(u32, u32), UnitInstance>,
+    pub last_raid_instance_id: u32,
     pub unit_instance_id: HashMap<u64, u32>,
     pub instance_resets: HashMap<u16, InstanceResetDto>,
     // instance_meta_id => [(character_id, history_id)]
@@ -47,6 +48,7 @@ impl Server {
             // TODO: Preserve all data when the app is restarted?
             summons: HashMap::new(),
             active_instances: HashMap::new(),
+            last_raid_instance_id: 0,
             unit_instance_id: HashMap::new(),
             instance_resets: HashMap::new(),
             instance_participants: HashMap::new(),

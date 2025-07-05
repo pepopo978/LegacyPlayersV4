@@ -100,7 +100,28 @@ impl Server {
                     Err(EventParseFailureAction::Wait) => {},
                 };
             } else {
-                remove_first_non_committed_event.push(subject_id);
+                if let MessageType::PercentPlayersInCombat(p) = &first_message.message_type {
+                    // commit using the last_raid_instance_id
+                    match self.commit_event(db_main, data, armory, first_message.clone(), member_id) {
+                        Ok(mut committable_event) => {
+                            if let EventType::PercentPlayersInCombat { percentage } = &committable_event.event {
+                                println!("Committing PercentPlayersInCombat using last_raid_instance_id event: id={}, ts={}, percentage={}", committable_event.id, committable_event.timestamp, percentage);
+                            }
+                            remove_first_non_committed_event.push(subject_id);
+
+                            let committed_event_count = self.committed_events_count.entry((self.last_raid_instance_id, member_id)).or_insert(1);
+                            committable_event.id = *committed_event_count;
+                            *committed_event_count += 1;
+
+                            self.committed_events.entry((self.last_raid_instance_id, member_id)).or_insert_with(|| VecDeque::with_capacity(1)).push_back(committable_event);
+                        },
+                        _ => {
+                            remove_first_non_committed_event.push(subject_id);
+                        }
+                    }
+                } else{
+                    remove_first_non_committed_event.push(subject_id);
+                }
             }
         }
 
@@ -112,7 +133,6 @@ impl Server {
             }
         }
     }
-
     fn cleanup(&mut self, current_timestamp: u64) {
         for subject_id in self
             .non_committed_events
@@ -542,6 +562,8 @@ impl Server {
 
                     self.unit_instance_id.insert(unit.unit_id, *instance_id);
                     self.unit_instance_id.insert(0, *instance_id);
+
+                    self.last_raid_instance_id = *instance_id;
                 } else {
                     self.unit_instance_id.remove(&unit.unit_id);
                 }
