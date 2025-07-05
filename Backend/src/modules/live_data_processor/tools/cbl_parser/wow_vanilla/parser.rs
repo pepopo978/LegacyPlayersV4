@@ -9,7 +9,7 @@ use crate::modules::live_data_processor::domain_value::{HitType, School};
 use crate::modules::live_data_processor::dto::{AuraApplication, DamageComponent, DamageDone, Death, HealDone, InstanceMap, Interrupt, Loot, Message, MessageType, PlayersInCombat, SpellCast, Summon, UnAura, Unit};
 use crate::modules::live_data_processor::material::{ActiveMapVec, Participant, WoWVanillaParser};
 use crate::modules::live_data_processor::tools::cbl_parser::CombatLogParser;
-use crate::modules::live_data_processor::tools::cbl_parser::wow_vanilla::hashed_unit_id::get_hashed_player_unit_id;
+use crate::modules::live_data_processor::tools::cbl_parser::wow_vanilla::hashed_unit_id::{get_hashed_player_unit_id, get_npc_unit_id};
 use crate::modules::live_data_processor::tools::cbl_parser::wow_vanilla::parse_spell_args::{parse_spell_args, parse_spell_args_periodic};
 use crate::modules::live_data_processor::tools::cbl_parser::wow_vanilla::parse_trailer::parse_trailer;
 use crate::modules::live_data_processor::tools::cbl_parser::wow_vanilla::parse_unit::parse_unit;
@@ -384,7 +384,7 @@ impl CombatLogParser for WoWVanillaParser {
         }
 
         if let Some(captures) = RE_DAMAGE_SPELL_HIT_OR_CRIT_SCHOOL.captures(&content) {
-            let attacker = parse_unit(&mut self.cache_unit, data, captures.get(1)?.as_str())?;
+            let mut attacker = parse_unit(&mut self.cache_unit, data, captures.get(1)?.as_str())?;
             let spell_name = captures.get(2)?.as_str();
             let spell_id = parse_spell_args(&mut self.cache_spell_id, data, spell_name)?;
             let mut hit_mask = if captures.get(3)?.as_str() == "cr" { HitType::Crit as u32 } else { HitType::Hit as u32 };
@@ -409,6 +409,11 @@ impl CombatLogParser for WoWVanillaParser {
             self.participants.get_mut(&victim.unit_id).unwrap().attribute_damage(damage);
 
             assign_spec_from_cast(self.participants.get_mut(&attacker.unit_id), spell_name, event_ts);
+
+            if spell_name == "Shackle Shatter" {
+                // change attacker to Mephistroth
+                attacker = Unit { is_player: false, unit_id: get_npc_unit_id(data, "Mephistroth").unwrap(), is_self_damage: false, is_mind_control:false };
+            }
 
             // Check if damage is 0 and handle as absorb-only
             if damage == 0 {
