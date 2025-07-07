@@ -247,6 +247,8 @@ impl Server {
                     },
                 );
 
+                println!("Death event: {:?}", event);
+
                 Ok(event)
             }
             MessageType::Event(event_dto) => {

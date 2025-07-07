@@ -169,7 +169,7 @@ impl Server {
                                                 attempt.creatures_required_to_die.clear();
 
                                                 // let combat ending commit the attempt to avoid issues with clones
-                                                if has_percent_players_in_combat_events && *encounter_npc_id == 15263{
+                                                if has_percent_players_in_combat_events && *encounter_npc_id == 15263 {
                                                     is_committable = false;
                                                 } else {
                                                     is_committable = attempt.creatures_required_to_die.is_empty();
@@ -186,6 +186,10 @@ impl Server {
                                                     event.timestamp, creature_id, name, attempt.creatures_required_to_die
                                                 );
                                             }
+                                        } else {
+                                            let npc = data.get_npc(1, *encounter_npc_id).unwrap();
+                                            let name = data.get_localization(1, npc.localization_id).unwrap().content;
+                                            println!("{}: combat death for creature {} name {} was not found in active attempts {:?}", event.timestamp, creature_id, name, active_attempts);
                                         }
 
                                         if is_committable {
