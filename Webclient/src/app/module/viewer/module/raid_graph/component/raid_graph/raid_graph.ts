@@ -53,7 +53,30 @@ export class RaidGraphComponent implements OnInit, OnDestroy {
                     autoSkip: true,
                     autoSkipPadding: 25,
                     callback: (value, index, values) => {
-                        return this.dateService.toRPLLTime(value);
+                        // For debugging: uncomment the next line to see what values are being passed
+                        // console.log('X-axis callback:', { value, index, chartLabelsLength: this.chartLabels?.length });
+                        
+                        // Try multiple approaches to get the correct timestamp
+                        let timestamp: number = Number(value);
+                        
+                        // If chartLabels contains the timestamps, use index to access them
+                        if (this.chartLabels && this.chartLabels[index] !== undefined) {
+                            timestamp = Number(this.chartLabels[index]);
+                        }
+                        // If value is 0 or very small (likely an index), try using chartLabels
+                        else if (Number(value) < 1000 && this.chartLabels && this.chartLabels[Number(value)] !== undefined) {
+                            timestamp = Number(this.chartLabels[Number(value)]);
+                        }
+                        
+                        // Check if this looks like seconds vs milliseconds
+                        // If max value is around 400 (as set in min/max), it's likely seconds since raid start
+                        // Use toTimeSpan for relative time display instead of absolute time
+                        if (timestamp < 86400) { // Less than 24 hours worth of seconds
+                            return this.dateService.toTimeSpan(timestamp * 1000); // Convert to milliseconds for timespan
+                        }
+                        
+                        // Otherwise treat as absolute timestamp
+                        return this.dateService.toRPLLTime(timestamp);
                     },
                     stepSize: 10
                 },
@@ -72,21 +95,63 @@ export class RaidGraphComponent implements OnInit, OnDestroy {
             duration: 0
         },
         plugins: {
-	    /*
-            // TODO migration
-	    // see chartjs v3 migration guide
             tooltip: {
                 callbacks: {
-                    title: (item, data): string | Array<string> => {
-                        return this.dateService.toRPLLTimePrecise(Number(item[0].label));
+                    title: (tooltipItems) => {
+                        const item = tooltipItems[0];
+                        const dataPoint = item.dataset.data[item.dataIndex] as any;
+                        
+                        // For scatter plots (events), use the x coordinate from the data point
+                        if (dataPoint && typeof dataPoint === 'object' && dataPoint.x !== undefined) {
+                            const timestamp = Number(dataPoint.x);
+                            // For events, x should be the actual timestamp from chartLabels
+                            if (timestamp < 86400) { // Relative time in seconds
+                                return `Time: ${this.dateService.toTimeSpan(timestamp * 1000)}`;
+                            }
+                            return `Time: ${this.dateService.toRPLLTime(timestamp)}`;
+                        }
+                        
+                        // For line/bar charts, use chartLabels with dataIndex
+                        if (this.chartLabels && this.chartLabels[item.dataIndex] !== undefined) {
+                            const timestamp = Number(this.chartLabels[item.dataIndex]);
+                            if (timestamp < 86400) { // Relative time in seconds
+                                return `Time: ${this.dateService.toTimeSpan(timestamp * 1000)}`;
+                            }
+                            return `Time: ${this.dateService.toRPLLTime(timestamp)}`;
+                        }
+                        
+                        // Last resort fallback
+                        return `Time: ${item.label}`;
                     },
-                    label: (item, data): string | Array<string> => {
-                        // @ts-ignore
-                        return !!data.datasets[item.datasetIndex].data[item.index].custom_label ? data.datasets[item.datasetIndex].data[item.index].custom_label.toString() : this.format_number(item.value);
+                    label: (context) => {
+                        const dataPoint = context.dataset.data[context.dataIndex] as any;
+                        // Check if this data point has a custom label (for events)
+                        if (dataPoint && dataPoint.custom_label) {
+                            const customLabel = dataPoint.custom_label;
+                            if (customLabel instanceof DelayedLabel) {
+                                // If the DelayedLabel content is still "Unknown", don't show spell ID for events like kills/deaths
+                                if (customLabel.content === "Unknown") {
+                                    // For kills/deaths, spell_id is often 0 (meaningless), so show generic label
+                                    if (dataPoint.spell_id === 0 || dataPoint.spell_id === undefined) {
+                                        const datasetLabel = context.dataset.label;
+                                        if (datasetLabel && (datasetLabel.includes('Death') || datasetLabel.includes('Kill'))) {
+                                            return 'Unknown Unit';
+                                        }
+                                        return 'Unknown';
+                                    }
+                                    // Only show spell ID if it's meaningful (> 0)
+                                    return `Spell ID: ${dataPoint.spell_id}`;
+                                }
+                                return customLabel.toString();
+                            }
+                            return customLabel.toString();
+                        }
+                        // For regular data points, format the value
+                        const value = context.parsed.y !== null ? context.parsed.y : context.raw;
+                        return this.format_number(Number(value) || 0);
                     }
                 }
             },
-	    */
 
             legend: {
                 display: false
