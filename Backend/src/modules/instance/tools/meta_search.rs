@@ -24,14 +24,8 @@ pub trait MetaSearch {
 impl MetaSearch for Instance {
     fn search_meta_raids(&self, db_main: &mut impl Select, armory: &Armory, data: &Data, current_user: Option<u32>, mut filter: RaidSearchFilter) -> SearchResult<MetaRaidSearch> {
         filter.guild.convert_to_lowercase();
-        let instance_metas_guard = match self.instance_metas.read() {
-            Ok(guard) => guard,
-            Err(poisoned) => {
-                // Handle poisoned lock by getting the data anyway
-                poisoned.into_inner()
-            }
-        };
-        let mut result = instance_metas_guard.1.values().collect::<Vec<&InstanceMeta>>()
+        let mut result = self
+            .instance_metas.read().unwrap().1.values().collect::<Vec<&InstanceMeta>>()
             .into_iter()
             .filter(|raid| raid.privacy_type == PrivacyType::Public)
             .filter(|raid| filter.map_id.apply_filter(raid.map_id))
@@ -88,11 +82,8 @@ impl MetaSearch for Instance {
 
     fn search_meta_raids_by_member(&self, db_main: &mut impl Select, armory: &Armory, data: &Data, current_user: Option<u32>, mut filter: RaidSearchFilter) -> SearchResult<MetaRaidSearch> {
         filter.guild.convert_to_lowercase();
-        let instance_metas_guard = self.instance_metas.read().unwrap_or_else(|poisoned| {
-            // Handle poisoned lock by getting the data anyway
-            poisoned.into_inner()
-        });
-        let mut result = instance_metas_guard.1.values().collect::<Vec<&InstanceMeta>>()
+        let mut result = self
+            .instance_metas.read().unwrap().1.values().collect::<Vec<&InstanceMeta>>()
             .into_iter()
             .filter(|raid| filter.map_id.apply_filter(raid.map_id))
             .filter(|raid| filter.start_ts.apply_filter_ts(raid.start_ts))
@@ -147,14 +138,8 @@ impl MetaSearch for Instance {
 
     fn search_meta_raids_by_character(&self, db_main: &mut impl Select, armory: &Armory, data: &Data, character_id: u32, mut filter: RaidSearchFilter) -> SearchResult<MetaRaidSearch> {
         filter.guild.convert_to_lowercase();
-        let instance_metas_guard = match self.instance_metas.read() {
-            Ok(guard) => guard,
-            Err(poisoned) => {
-                // Handle poisoned lock by getting the data anyway
-                poisoned.into_inner()
-            }
-        };
-        let mut result = instance_metas_guard.1.values().collect::<Vec<&InstanceMeta>>()
+        let mut result = self
+            .instance_metas.read().unwrap().1.values().collect::<Vec<&InstanceMeta>>()
             .into_iter()
             .filter(|raid| raid.privacy_type == PrivacyType::Public)
             .filter(|raid| filter.map_id.apply_filter(raid.map_id))

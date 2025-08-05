@@ -8,6 +8,7 @@ use crate::modules::live_data_processor::material::{Attempt, Server};
 use crate::modules::live_data_processor::tools::LiveDataDeserializer;
 use crate::params;
 use crate::util::database::{Execute, Select};
+use time_util::format_ts_ms;
 use std::collections::{HashMap, VecDeque};
 use std::fs;
 use std::fs::File;
@@ -66,6 +67,7 @@ impl Server {
         for (instance_id, committed_events) in self.committed_events.iter() {
             if let Some(UnitInstance { instance_meta_id, .. }) = self.active_instances.get(&instance_id) {
                 let active_attempts = self.active_attempts.entry(*instance_id).or_insert_with(|| HashMap::with_capacity(1));
+                let completed_attempts = self.completed_attempts.entry(*instance_id).or_insert_with(|| HashMap::with_capacity(1));
                 for event in committed_events.iter() {
                     // if this is a percent players in combat event
                     if let EventType::PercentPlayersInCombat { percentage } = &event.event {
@@ -74,9 +76,9 @@ impl Server {
                         // combat has ended, commit attempt
                         if *percentage == 0 && previous_percent_players_in_combat > 0 {
                             for (_, mut attempt) in active_attempts.drain() {
-                                println!("{}: committing attempt for encounter {} due to PercentPlayersInCombat=0", event.timestamp, attempt.encounter_id);
+                                println!("{}: committing attempt for encounter {} due to PercentPlayersInCombat=0", format_ts_ms(event.timestamp), attempt.encounter_id);
                                 attempt.end_ts = event.timestamp;
-                                commit_attempt(db_main, *instance_meta_id, attempt);
+                                commit_attempt(db_main, *instance_meta_id, attempt, completed_attempts);
                             }
                         }
                         previous_percent_players_in_combat = *percentage;
@@ -88,14 +90,14 @@ impl Server {
                             if let Some(encounter_npc) = data.get_encounter_npc(*encounter_npc_id) {
                                 match &event.event {
                                     EventType::CombatState { in_combat } => {
-                                        if *in_combat && (active_attempts.contains_key(&encounter_npc.encounter_id) || encounter_npc.can_start_encounter) {
+                                        if *in_combat && (active_attempts.contains_key(&encounter_npc.encounter_id) || encounter_npc.can_start_encounter) && !completed_attempts.contains_key(&encounter_npc.encounter_id) {
                                             let is_new_attempt = !active_attempts.contains_key(&encounter_npc.encounter_id);
                                             let attempt = active_attempts
                                                 .entry(encounter_npc.encounter_id)
                                                 .or_insert_with(|| Attempt::new(encounter_npc.encounter_id, event.timestamp, data.encounter_has_pivot(encounter_npc.encounter_id)));
 
                                             if is_new_attempt {
-                                                println!("{}: starting combat with {} for encounter {} attempt enc {}", event.timestamp, encounter_npc.npc_id, encounter_npc.encounter_id, attempt.encounter_id);
+                                                println!("{}: starting combat with {} for encounter {} attempt enc {}", format_ts_ms(event.timestamp), encounter_npc.npc_id, encounter_npc.encounter_id, attempt.encounter_id);
 
                                                 // add main boss to fights with starting add phases
                                                 // C'Thun(42), Nefarian(29), Razorgore(22), Thekal(17), Kel'Thuzad(57), Gothik(54), Thaddius(46), Ley-Watcher Incantagos(207)
@@ -146,11 +148,11 @@ impl Server {
                                                     let name = data.get_localization(1, npc.localization_id).unwrap().content;
                                                     println!(
                                                         "{}: combat timeout for {} name {} for encounter {} attempt enc {}",
-                                                        event.timestamp, encounter_npc.npc_id, name, encounter_npc.encounter_id, attempt.encounter_id
+                                                        format_ts_ms(event.timestamp), encounter_npc.npc_id, name, encounter_npc.encounter_id, attempt.encounter_id
                                                     );
 
                                                     attempt.end_ts = event.timestamp;
-                                                    commit_attempt(db_main, *instance_meta_id, attempt);
+                                                    commit_attempt(db_main, *instance_meta_id, attempt, completed_attempts);
                                                 }
                                             }
                                         }
@@ -183,20 +185,20 @@ impl Server {
                                             if removed_id {
                                                 println!(
                                                     "{}: required combat death for creature {} name {} creatures_required_to_die {:?}",
-                                                    event.timestamp, creature_id, name, attempt.creatures_required_to_die
+                                                    format_ts_ms(event.timestamp), creature_id, name, attempt.creatures_required_to_die
                                                 );
                                             }
                                         } else {
                                             let npc = data.get_npc(1, *encounter_npc_id).unwrap();
                                             let name = data.get_localization(1, npc.localization_id).unwrap().content;
-                                            println!("{}: combat death for creature {} name {} was not found in active attempts {:?}", event.timestamp, creature_id, name, active_attempts);
+                                            println!("{}: combat death for creature {} name {} was not found in active attempts {:?}", format_ts_ms(event.timestamp), creature_id, name, active_attempts);
                                         }
 
                                         if is_committable {
                                             if let Some(mut attempt) = active_attempts.remove(&encounter_npc.encounter_id) {
                                                 attempt.end_ts = event.timestamp;
-                                                println!("{}: combat death for {} for encounter {} attempt enc {}", event.timestamp, encounter_npc.npc_id, encounter_npc.encounter_id, attempt.encounter_id);
-                                                commit_attempt(db_main, *instance_meta_id, attempt);
+                                                println!("{}: combat death for {} for encounter {} attempt enc {}", format_ts_ms(event.timestamp), encounter_npc.npc_id, encounter_npc.encounter_id, attempt.encounter_id);
+                                                commit_attempt(db_main, *instance_meta_id, attempt, completed_attempts);
                                             }
                                         }
                                     },
@@ -217,9 +219,9 @@ impl Server {
                                                     attempt.end_ts = event.timestamp;
                                                     println!(
                                                         "{}: pivot creature {} health threshold reached for encounter {} attempt enc {}",
-                                                        event.timestamp, creature_id, encounter_npc.encounter_id, attempt.encounter_id
+                                                        format_ts_ms(event.timestamp), creature_id, encounter_npc.encounter_id, attempt.encounter_id
                                                     );
-                                                    commit_attempt(db_main, *instance_meta_id, attempt);
+                                                    commit_attempt(db_main, *instance_meta_id, attempt, completed_attempts);
                                                 }
                                             }
                                         }
@@ -260,16 +262,16 @@ impl Server {
                                                 if attempt.creatures_required_to_die.is_empty() {
                                                     if let Some(mut attempt) = active_attempts.remove(&encounter_id) {
                                                         attempt.end_ts = event.timestamp;
-                                                        println!("{}: < 5 infight units committing attempt for encounter {} as kill", event.timestamp, encounter_id);
-                                                        commit_attempt(db_main, *instance_meta_id, attempt);
+                                                        println!("{}: < 5 infight units committing attempt for encounter {} as kill", format_ts_ms(event.timestamp), encounter_id);
+                                                        commit_attempt(db_main, *instance_meta_id, attempt, completed_attempts);
                                                     }
                                                 }
                                                 // Commit As Attempt
                                                 else if attempt.creatures_in_combat.is_empty() {
                                                     if let Some(mut attempt) = active_attempts.remove(&encounter_id) {
                                                         attempt.end_ts = event.timestamp;
-                                                        println!("{}: < 5 infight units committing attempt for encounter {} as attempt", event.timestamp, encounter_id);
-                                                        commit_attempt(db_main, *instance_meta_id, attempt);
+                                                        println!("{}: < 5 infight units committing attempt for encounter {} as attempt", format_ts_ms(event.timestamp), encounter_id);
+                                                        commit_attempt(db_main, *instance_meta_id, attempt, completed_attempts);
                                                     }
                                                 }
                                             }
@@ -444,10 +446,10 @@ fn process_ranking(unit: &Unit, event: &Event, data: &Data, active_attempts: &mu
     }
 }
 
-fn commit_attempt(db_main: &mut (impl Execute + Select), instance_meta_id: u32, mut attempt: Attempt) {
+fn commit_attempt(db_main: &mut (impl Execute + Select), instance_meta_id: u32, mut attempt: Attempt, completed_attempts: &mut HashMap<u32, Attempt>) {
     // Likely a false positive
     if attempt.end_ts - attempt.start_ts <= 5000 {
-        println!("{}: ignoring attempt for encounter {} as it is too short", attempt.start_ts, attempt.encounter_id);
+        println!("{}: ignoring attempt for encounter {} as it is too short", format_ts_ms(attempt.start_ts), attempt.encounter_id);
         return;
     }
 
@@ -513,12 +515,12 @@ fn commit_attempt(db_main: &mut (impl Execute + Select), instance_meta_id: u32, 
     }
 
     if attempt.creatures_required_to_die.is_empty() {
-        println!("{}: committing attempt for encounter {} as kill", attempt.end_ts, attempt.encounter_id);
+        println!("{}: committing attempt for encounter {} as kill", format_ts_ms(attempt.end_ts), attempt.encounter_id);
     } else {
         // print mobs required to die
         println!(
             "{}: committing attempt for encounter {} as attempt, mobs required to die: {:?}",
-            attempt.end_ts, attempt.encounter_id, attempt.creatures_required_to_die
+            format_ts_ms(attempt.end_ts), attempt.encounter_id, attempt.creatures_required_to_die
         );
     }
 
@@ -530,6 +532,12 @@ fn commit_attempt(db_main: &mut (impl Execute + Select), instance_meta_id: u32, 
         "INSERT INTO `instance_attempt` (`instance_meta_id`, `encounter_id`, `start_ts`, `end_ts`, `is_kill`) VALUES (:instance_meta_id, :encounter_id, :start_ts, :end_ts, :is_kill)",
         params.clone(),
     );
+
+    // If this is a completed attempt (kill), add it to completed_attempts to prevent restarting
+    if is_kill {
+        completed_attempts.insert(attempt.encounter_id, attempt.clone());
+        println!("{}: marking encounter {} as completed", format_ts_ms(attempt.end_ts), attempt.encounter_id);
+    }
 
     if !is_kill {
         return;

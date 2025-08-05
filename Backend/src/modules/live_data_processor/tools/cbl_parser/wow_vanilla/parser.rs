@@ -1,6 +1,5 @@
 use chrono::NaiveDateTime;
 use regex::Regex;
-
 use crate::modules::armory::domain_value::GuildRank;
 use crate::modules::armory::dto::{CharacterDto, CharacterGearDto, CharacterGuildDto, CharacterHistoryDto, CharacterInfoDto, CharacterItemDto, GuildDto};
 use crate::modules::data::Data;

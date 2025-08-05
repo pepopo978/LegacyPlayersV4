@@ -5,13 +5,15 @@ use std::collections::{BTreeSet, VecDeque};
 use chrono::Duration;
 use chrono::{Datelike, NaiveDateTime, Timelike};
 
-use time_util::now;
+use time_util::{format_ts_ms, now};
 
 use crate::modules::armory::tools::GetArenaTeam;
 use crate::modules::armory::Armory;
 use crate::modules::data::tools::RetrieveSpell;
 use crate::modules::data::Data;
-use crate::modules::live_data_processor::domain_value::{hit_mask_from_u32, school_mask_from_u8, AuraApplication, Creature, Event, EventParseFailureAction, EventType, Mitigation, Position, Power, PowerType, School, SpellComponent, Unit, UnitInstance};
+use crate::modules::live_data_processor::domain_value::{
+    hit_mask_from_u32, school_mask_from_u8, AuraApplication, Creature, Event, EventParseFailureAction, EventType, Mitigation, Position, Power, PowerType, School, SpellComponent, Unit, UnitInstance,
+};
 use crate::modules::live_data_processor::dto::{get_damage_components_total, CombatState, Death, Loot, PlayersInCombat, Summon};
 use crate::modules::live_data_processor::dto::{LiveDataProcessorFailure, Message, MessageType};
 use crate::modules::live_data_processor::material::Server;
@@ -45,10 +47,19 @@ impl Server {
 
     fn push_non_committed_event(&mut self, message: Message) {
         if let Some(unit_dto) = message.message_type.extract_subject() {
+            // Debug: Log death events being added
+
+            // let timestamp = message.timestamp;
+            let message_type = message.message_type.clone();
+
             let non_committed_events = self.non_committed_events.entry(unit_dto.unit_id).or_insert_with(|| VecDeque::with_capacity(1));
-            if self.subject_prepend_mode_set.contains(&unit_dto.unit_id) {
+            if matches!(&message_type, MessageType::Death(_)) || self.subject_prepend_mode_set.contains(&unit_dto.unit_id) {
                 non_committed_events.push_front(message);
                 self.subject_prepend_mode_set.remove(&unit_dto.unit_id);
+
+                // if matches!(&message_type, MessageType::Death(_)) {
+                //     println!("Adding death event to front of non_committed_events - subject_id: {} {:?}, ts={}", unit_dto.unit_id, unit_dto, format_ts_ms(timestamp));
+                // }
             } else {
                 non_committed_events.push_back(message);
             }
@@ -61,8 +72,10 @@ impl Server {
 
     fn test_for_committable_events(&mut self, db_main: &mut (impl Select + Execute), data: &Data, armory: &Armory, member_id: u32) {
         let mut remove_first_non_committed_event = Vec::new();
+        
         for (subject_id, first_message) in self.non_committed_events.iter().map(|(subject_id, nce)| (*subject_id, nce.front().unwrap().clone())).collect::<Vec<(u64, Message)>>() {
             if let Some(unit_instance_id) = self.unit_instance_id.get(&subject_id).cloned() {
+                let message_subject = first_message.message_type.extract_subject();
                 match self.commit_event(db_main, data, armory, first_message, member_id) {
                     Ok(mut committable_event) => {
                         // For all except Spell we want to only remove the first event
@@ -86,6 +99,9 @@ impl Server {
                                 .entry((unit_instance_id, member_id))
                                 .or_insert_with(|| VecDeque::with_capacity(1))
                                 .push_back(committable_event.clone()),
+                            EventType::Death { .. } => {
+                                println!("Committing Death {:?}: id={}, ts={}", message_subject, committable_event.id, format_ts_ms(committable_event.timestamp));
+                            },
                             _ => {},
                         };
 
@@ -111,19 +127,28 @@ impl Server {
                             *committed_event_count += 1;
 
                             if let EventType::PercentPlayersInCombat { percentage } = &committable_event.event {
-                                println!("Committing PercentPlayersInCombat using last_raid_instance_id event: id={}, ts={}, percentage={}", committable_event.id, committable_event.timestamp, percentage);
+                                println!(
+                                    "Committing PercentPlayersInCombat using last_raid_instance_id event: id={}, ts={}, percentage={}",
+                                    committable_event.id,
+                                    format_ts_ms(committable_event.timestamp),
+                                    percentage
+                                );
                             } else if let EventType::Death { .. } = &committable_event.event {
-                                println!("Committing Death {:?} using last_raid_instance_id event: id={}, ts={}",first_message.message_type.extract_subject(), committable_event.id, committable_event.timestamp);
+                                println!(
+                                    "Committing Death {:?} using last_raid_instance_id event: id={}, ts={}",
+                                    first_message.message_type.extract_subject(),
+                                    committable_event.id,
+                                    format_ts_ms(committable_event.timestamp)
+                                );
                             }
-
 
                             self.committed_events.entry((self.last_raid_instance_id, member_id)).or_insert_with(|| VecDeque::with_capacity(1)).push_back(committable_event);
                         },
                         _ => {
                             remove_first_non_committed_event.push(subject_id);
-                        }
+                        },
                     }
-                } else{
+                } else {
                     remove_first_non_committed_event.push(subject_id);
                 }
             }
@@ -137,6 +162,7 @@ impl Server {
             }
         }
     }
+
     fn cleanup(&mut self, current_timestamp: u64) {
         for subject_id in self
             .non_committed_events
@@ -175,11 +201,15 @@ impl Server {
                 let subject = unit_dto.to_unit_add_implicit(&mut self.cache_unit, db_main, armory, self.server_id, &self.summons).map_err(|_| EventParseFailureAction::DiscardFirst);
                 Ok(Event::new(first_message.message_count, first_message.timestamp, subject?, EventType::CombatState { in_combat }))
             },
-            MessageType::PercentPlayersInCombat(PlayersInCombat {unit: _unit, percentage}) => {
+            MessageType::PercentPlayersInCombat(PlayersInCombat { unit: _unit, percentage }) => {
                 Ok(Event::new(
                     first_message.message_count,
                     first_message.timestamp,
-                    Unit::Creature(Creature { creature_id: 0, encounter_npc_id: 0, owner: None }), // dummy unit
+                    Unit::Creature(Creature {
+                        creature_id: 0,
+                        encounter_npc_id: 0,
+                        owner: None,
+                    }), // dummy unit
                     EventType::PercentPlayersInCombat { percentage },
                 ))
             },
@@ -252,7 +282,7 @@ impl Server {
                 );
 
                 Ok(event)
-            }
+            },
             MessageType::Event(event_dto) => {
                 if event_dto.event_type == 0 {
                     if let Ok(creature @ domain_value::Unit::Creature(_)) = event_dto.unit.to_unit_add_implicit(&mut self.cache_unit, db_main, armory, self.server_id, &self.summons) {

@@ -23,6 +23,9 @@ pub struct Server {
     // though most of the times only 1
     // Key: (instance_id, member_id)
     pub active_attempts: HashMap<(u32, u32), HashMap<u32, Attempt>>,
+    // Completed attempts to avoid restarting them
+    // Key: (instance_id, member_id)
+    pub completed_attempts: HashMap<(u32, u32), HashMap<u32, Attempt>>,
 
     // Used to handle unordered events
     pub subject_prepend_mode_set: BTreeSet<u64>, // Contains server_uid of subject
@@ -57,6 +60,7 @@ impl Server {
             committed_events_count: HashMap::new(),
             subject_prepend_mode_set: BTreeSet::new(),
             active_attempts: HashMap::new(),
+            completed_attempts: HashMap::new(),
             post_processing_last_precessed_event_id: HashMap::new(),
             recently_committed_spell_cast_and_aura_applications: HashMap::new(),
             cache_unit: HashMap::new(),
