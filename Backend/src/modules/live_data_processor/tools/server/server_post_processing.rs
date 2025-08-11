@@ -453,6 +453,37 @@ fn commit_attempt(db_main: &mut (impl Execute + Select), instance_meta_id: u32, 
         return;
     }
 
+    // switch encounter from 42 -> 60 for C'Thun < 2 min (AQ40)
+    if attempt.encounter_id == 42 && attempt.end_ts - attempt.start_ts < 120000 {
+        println!("switching encounter from 42 to 60 for C'Thun < 2 min {}", attempt.end_ts - attempt.start_ts);
+        attempt.encounter_id = 60;
+    }
+
+    // switch encounter from 54 -> 61 for Gothik < 3 min (Gothik)
+    if attempt.encounter_id == 54 && attempt.end_ts - attempt.start_ts < 180000 {
+        println!("switching encounter from 54 to 61 for Gothik < 3 min {}", attempt.end_ts - attempt.start_ts);
+        attempt.encounter_id = 61;
+    }
+
+    // switch encounter from 57 -> 62 for Kel'Thuzad < 3.5 min (Kel'Thuzad)
+    if attempt.encounter_id == 57 && attempt.end_ts - attempt.start_ts < 210000 {
+        println!("switching encounter from 57 to 62 for Kel'Thuzad < 3.5 min {}", attempt.end_ts - attempt.start_ts);
+        attempt.encounter_id = 62;
+    }
+
+    // switch encounter from 57 -> 63 for Kel'Thuzad > 6 min (Kel'Thuzad)
+    if attempt.encounter_id == 57 && attempt.end_ts - attempt.start_ts > 360000 {
+        println!("switching encounter from 57 to 63 for Kel'Thuzad > 6 min {}", attempt.end_ts - attempt.start_ts);
+        attempt.encounter_id = 63;
+    }
+
+    // switch encounter from 29 -> 64 for Nefarian < 3 min (Nefarian)
+    if attempt.encounter_id == 29 && attempt.end_ts - attempt.start_ts < 180000 {
+        println!("switching encounter from 29 to 64 for Nefarian < 3 min {}", attempt.end_ts - attempt.start_ts);
+        attempt.encounter_id = 64;
+    }
+
+
     // Ulduar hard modes
     // Flame Leviathan
     if attempt.encounter_id == 114 {
