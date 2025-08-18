@@ -185,7 +185,7 @@ fn calculate_speed_runs(
     lazy_static! {
         static ref INSTANCE_ENCOUNTERS: HashMap<u16, Vec<u32>> = {
             let mut instance_encounters = HashMap::new();
-            instance_encounters.insert(409, vec![1, 2, 3, 4, 5, 6, 7, 8, 9, 10]);
+            instance_encounters.insert(409, vec![80, 1, 2, 81, 82, 4, 5, 6, 7, 8, 9, 10]);
             instance_encounters.insert(249, vec![11]);
             instance_encounters.insert(309, vec![12, 13, 14, 15, 17, 19, 20, 21]);
             instance_encounters.insert(469, vec![22, 23, 24, 25, 26, 27, 28, 29]);
