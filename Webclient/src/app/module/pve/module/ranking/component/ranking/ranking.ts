@@ -60,9 +60,9 @@ export class RankingComponent implements OnInit, OnDestroy {
     additional_encounter_button: AdditionalButton[] = [
         {
             id: -1,
-            label: "Molten Core",
+            label: "Molten Core (1.18)",
             list_selection_callback: (button, selected_list, current_list, checked) =>
-                this.uncheck_if_all_check_else([1, 2, 3, 4, 5, 6, 7, 8, 9, 10], selected_list, current_list)
+                this.uncheck_if_all_check_else([80, 1, 2, 81, 82, 4, 5, 6, 7, 8, 9, 10], selected_list, current_list)
         },
         {
             id: -2,
