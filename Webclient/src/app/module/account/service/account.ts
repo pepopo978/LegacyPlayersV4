@@ -10,7 +10,6 @@ export class AccountService {
 
     constructor(private apiService: APIService,
                 private settingsService: SettingsService) {
-        this.prolong();
     }
 
     prolong(): void {

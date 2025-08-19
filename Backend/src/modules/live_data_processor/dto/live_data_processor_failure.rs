@@ -11,7 +11,8 @@ pub enum LiveDataProcessorFailure {
     FileIsNotUTF8,
     InvalidZipFile,
     InvalidStartTime,
-    InvalidEndTime
+    InvalidEndTime,
+    DuplicateUpload
 }
 
 impl Responder<'static> for LiveDataProcessorFailure {
@@ -42,6 +43,10 @@ impl Responder<'static> for LiveDataProcessorFailure {
                 body = "Invalid input: End Time has an invalid format!".to_owned();
                 Status::new(539, "InvalidEndTime")
             },
+            LiveDataProcessorFailure::DuplicateUpload => {
+                body = "Upload already exists for this member!".to_owned();
+                Status::new(541, "DuplicateUpload")
+            },
         };
         Response::build().status(status).sized_body(Cursor::new(body)).ok()
     }
@@ -56,7 +61,8 @@ impl OpenApiResponder<'static> for LiveDataProcessorFailure {
         add_schema_response(&mut responses, 536, "text/plain", schema.clone())?;
         add_schema_response(&mut responses, 537, "text/plain", schema.clone())?;
         add_schema_response(&mut responses, 538, "text/plain", schema.clone())?;
-        add_schema_response(&mut responses, 539, "text/plain", schema)?;
+        add_schema_response(&mut responses, 539, "text/plain", schema.clone())?;
+        add_schema_response(&mut responses, 541, "text/plain", schema)?;
         Ok(responses)
     }
 }

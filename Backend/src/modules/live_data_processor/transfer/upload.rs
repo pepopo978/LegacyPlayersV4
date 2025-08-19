@@ -1,5 +1,6 @@
 use std::fs::File;
 use std::io::{Read, Write};
+use sha2::{Sha256, Digest};
 
 use rocket::{Data, State};
 use rocket::http::ContentType;
@@ -60,13 +61,31 @@ pub fn upload_log(mut db_main: MainDb, auth: Authenticate, me: State<LiveDataPro
     if raw.is_empty() {
         return Err(LiveDataProcessorFailure::InvalidInput);
     }
+
+    // Calculate SHA256 hash of the uploaded file
+    let mut hasher = Sha256::new();
+    hasher.update(&raw);
+    let hash_result = hasher.finalize();
+    let hash_string = format!("{:x}", hash_result);
+
+    // Check if this hash already exists for this member
+    let duplicate_check_params = params!("member_id" => auth.0, "hash" => hash_string.clone());
+    let existing_upload: Option<u32> = db_main.0.select_wparams_value(
+        "SELECT id FROM `instance_uploads` WHERE `member_id`=:member_id AND `hash`=:hash",
+        |mut row| row.take::<u32, usize>(0),
+        duplicate_check_params
+    ).unwrap_or(None);
+
+    if existing_upload.is_some() {
+        return Err(LiveDataProcessorFailure::DuplicateUpload);
+    }
     let reader = std::io::Cursor::new(raw.as_slice());
     let mut zip = zip::ZipArchive::new(reader).map_err(|_| LiveDataProcessorFailure::InvalidZipFile)?;
 
     // Create Upload Id
     let upload_time = time_util::now();
-    let upload_params = params!("member_id" => auth.0, "ts" => upload_time);
-    db_main.0.execute_wparams("INSERT INTO `instance_uploads` (`member_id`, `timestamp`) VALUES (:member_id, :ts)", upload_params.clone());
+    let upload_params = params!("member_id" => auth.0, "ts" => upload_time, "hash" => hash_string.clone());
+    db_main.0.execute_wparams("INSERT INTO `instance_uploads` (`member_id`, `timestamp`, `hash`) VALUES (:member_id, :ts, :hash)", upload_params.clone());
     let upload_id: u32 = db_main.0.select_wparams_value("SELECT id FROM `instance_uploads` WHERE `member_id`=:member_id AND `timestamp`=:ts",
                                                         |mut row| row.take::<u32, usize>(0).unwrap(), upload_params).unwrap();
 

@@ -2,6 +2,7 @@ use std::collections::HashMap;
 use std::fs::File;
 use std::io::Read;
 use std::sync::{Arc, RwLock};
+use sha2::{Sha256, Digest};
 
 use crate::material::Cachable;
 use crate::modules::armory::tools::{GetCharacter};
@@ -160,6 +161,85 @@ impl Instance {
                     }
                 }
                 println!("[Update loop] finish spec update");
+
+                // Update hashes for instance_uploads with null hash
+                let uploads_without_hash = db_main.select(
+                    "SELECT id FROM instance_uploads WHERE hash IS NULL LIMIT 25",
+                    |mut row| row.take::<u32, usize>(0).unwrap()
+                );
+
+                for upload_id in uploads_without_hash {
+                    let storage_path = std::env::var("INSTANCE_STORAGE_PATH").expect("storage path must be set");
+                    let zip_path = format!("{}/zips/upload_{}.zip", storage_path, upload_id);
+
+                    println!("[Update loop] Updating hash for upload_id: {}", upload_id);
+                    if let Ok(mut file) = File::open(zip_path) {
+                        let mut buffer = Vec::new();
+                        if file.read_to_end(&mut buffer).is_ok() {
+                            // Calculate SHA256 hash
+                            let mut hasher = Sha256::new();
+                            hasher.update(&buffer);
+                            let hash_result = hasher.finalize();
+                            let hash_string = format!("{:x}", hash_result);
+                            
+                            // Update the database with the calculated hash
+                            db_main.execute_wparams(
+                                "UPDATE instance_uploads SET hash = :hash WHERE id = :id",
+                                params!("hash" => hash_string.clone(), "id" => upload_id)
+                            );
+                            
+                            // Get member_id for this upload
+                            let member_id: u32 = db_main.select_wparams_value(
+                                "SELECT member_id FROM instance_uploads WHERE id = :id",
+                                |mut row| row.take::<u32, usize>(0).unwrap(),
+                                params!("id" => upload_id)
+                            ).unwrap();
+                            
+                            // Delete duplicate uploads with same member_id and hash but lower upload id
+                            let duplicate_upload_ids: Vec<u32> = db_main.select_wparams(
+                                "SELECT id FROM instance_uploads WHERE member_id = :member_id AND hash = :hash AND id < :upload_id",
+                                |mut row| row.take::<u32, usize>(0).unwrap(),
+                                params!("member_id" => member_id, "hash" => hash_string, "upload_id" => upload_id)
+                            );
+                            
+                            for duplicate_id in duplicate_upload_ids {
+                                // Delete instance_meta records first
+                                db_main.execute_wparams(
+                                    "DELETE FROM instance_meta WHERE upload_id = :upload_id",
+                                    params!("upload_id" => duplicate_id)
+                                );
+                                
+                                // Delete the duplicate instance_uploads record
+                                db_main.execute_wparams(
+                                    "DELETE FROM instance_uploads WHERE id = :id",
+                                    params!("id" => duplicate_id)
+                                );
+                                
+                                println!("Deleted duplicate upload_id: {} (same hash as {})", duplicate_id, upload_id);
+                            }
+                            
+                            println!("Updated hash for upload_id: {}", upload_id);
+                        }
+                    } else {
+                        // File doesn't exist, delete the instance_uploads record and any attached instance_meta
+                        println!("Zip file not found for upload_id: {}, deleting from database", upload_id);
+                        
+                        // Delete any instance_meta records that reference this upload
+                        db_main.execute_wparams(
+                            "DELETE FROM instance_meta WHERE upload_id = :upload_id",
+                            params!("upload_id" => upload_id)
+                        );
+                        
+                        // Delete the instance_uploads record
+                        db_main.execute_wparams(
+                            "DELETE FROM instance_uploads WHERE id = :id",
+                            params!("id" => upload_id)
+                        );
+                        
+                        println!("Deleted instance_uploads and related instance_meta for upload_id: {}", upload_id);
+                    }
+                }
+                println!("[Update loop] finish hash update");
 
                 armory.update(&mut db_main);
                 println!("[Update loop] finish armory update");

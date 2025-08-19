@@ -32,6 +32,7 @@
         "538": "Invalid Format of the start time!",
         "539": "Invalid Format of the end time!",
         "540": "Rankings are currently updating!",
+        "541": "You have already uploaded this log!  Please wait up to an hour for it to process and appear in your uploads.",
         "599": "An unknown error occurred!",
         "mail_confirm": "All set! There will be no e-mail verification.",
         "reset_mail_confirm": "A mail has been send to the specified address!"
