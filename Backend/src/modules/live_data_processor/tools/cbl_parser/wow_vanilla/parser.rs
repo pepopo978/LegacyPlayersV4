@@ -541,7 +541,7 @@ impl CombatLogParser for WoWVanillaParser {
                 _ => unreachable!(),
             };
             let victim = parse_unit(&mut self.cache_unit, data, captures.get(4)?.as_str())?;
-            let spell_id = 2; // Thats our reflection spell
+            let spell_id = 9906; // Spell named 'Reflection'
             self.collect_participant(&attacker, captures.get(1)?.as_str(), event_ts);
             self.collect_participant(&victim, captures.get(4)?.as_str(), event_ts);
             self.collect_active_map(data, &attacker, event_ts);
