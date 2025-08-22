@@ -1,4 +1,3 @@
-use crate::material::Cachable;
 use crate::modules::armory::tools::GetCharacter;
 use crate::modules::armory::Armory;
 use crate::modules::data::tools::RetrieveServer;
@@ -23,35 +22,14 @@ pub trait ExportInstance {
 
 impl ExportInstance for Instance {
     fn export_instance_event_type(&self, instance_meta_id: u32, event_type: u8) -> Result<Vec<String>, InstanceFailure> {
-        let (server_id, expired) = {
+        let server_id = {
             let instance_metas = self.instance_metas.read().unwrap();
             let instance_meta = instance_metas.1.get(&instance_meta_id).ok_or(InstanceFailure::InvalidInput)?;
-            (instance_meta.server_id, instance_meta.expired)
+            instance_meta.server_id
         };
-
-        {
-            let instance_exports = self.instance_exports.read().unwrap();
-            if let Some(cached) = instance_exports.get(&(instance_meta_id, event_type)) {
-                let now = time_util::now() * 1000;
-                let last_updated = cached.get_last_updated();
-                if (expired.is_some() && expired.unwrap() < last_updated) || (last_updated + 300000 > now) {
-                    return Ok(cached.get_cached());
-                }
-            }
-        }
 
         let storage_path = std::env::var("INSTANCE_STORAGE_PATH").expect("storage path must be set");
         if Path::new(&format!("{}/{}/{}.zip", storage_path, server_id, instance_meta_id)).exists() {
-            let mut instance_exports = self.instance_exports.write().unwrap();
-            // In Case of parallel accesses
-            if let Some(cached) = instance_exports.get(&(instance_meta_id, event_type)) {
-                let now = time_util::now() * 1000;
-                let last_updated = cached.get_last_updated() * 1000;
-                if (expired.is_some() && expired.unwrap() < last_updated) || (last_updated + 300000 > now) {
-                    return Ok(cached.get_cached());
-                }
-            }
-
             let reader = File::open(format!("{}/{}/{}.zip", storage_path, server_id, instance_meta_id)).unwrap();
             let zip = zip::ZipArchive::new(reader);
             if zip.is_err() {
@@ -63,31 +41,21 @@ impl ExportInstance for Instance {
             for i in 0..zip.len() {
                 let mut file = zip.by_index(i).unwrap();
                 let evt_type = u8::from_str_radix(file.name(), 10).unwrap();
-                let mut content = String::with_capacity(file.size() as usize);
-                let read_result = file.read_to_string(&mut content);
-                if read_result.is_ok() {
-                    let events = content.lines().into_iter().map(|cont| cont.to_owned()).collect::<Vec<String>>();
-                    instance_exports.insert((instance_meta_id, evt_type), Cachable::new(events));
-                } else {
-                    instance_exports.insert((instance_meta_id, evt_type), Cachable::new(Vec::new()));
+                if evt_type == event_type {
+                    let mut content = String::with_capacity(file.size() as usize);
+                    let read_result = file.read_to_string(&mut content);
+                    if read_result.is_ok() {
+                        let events = content.lines().into_iter().map(|cont| cont.to_owned()).collect::<Vec<String>>();
+                        return Ok(events);
+                    } else {
+                        return Ok(Vec::new());
+                    }
                 }
-            }
-
-            for i in 0..20 {
-                if !instance_exports.contains_key(&(instance_meta_id, i)) {
-                    instance_exports.insert((instance_meta_id, i), Cachable::new(Vec::new()));
-                }
-            }
-
-            if let Some(cached) = instance_exports.get(&(instance_meta_id, event_type)) {
-                return Ok(cached.get_cached());
             }
         } else {
             let event_path = format!("{}/{}/{}/{}", storage_path, server_id, instance_meta_id, event_type);
             if let Ok(file_content) = std::fs::read_to_string(event_path) {
                 let events = file_content.lines().into_iter().map(|cont| cont.to_owned()).collect::<Vec<String>>();
-                let mut instance_exports = self.instance_exports.write().unwrap();
-                instance_exports.insert((instance_meta_id, event_type), Cachable::new(events.clone()));
                 return Ok(events);
             }
         }
@@ -148,21 +116,10 @@ impl ExportInstance for Instance {
     }
 
     fn get_instance_attempts(&self, db_main: &mut impl Select, instance_meta_id: u32) -> Result<Vec<InstanceViewerAttempt>, InstanceFailure> {
-        let expired = {
-            let instance_metas = self.instance_metas.read().unwrap();
-            let instance_meta = instance_metas.1.get(&instance_meta_id).ok_or(InstanceFailure::InvalidInput)?;
-            instance_meta.expired
-        };
-
+        // Validate that the instance meta exists
         {
-            let instance_attempts = self.instance_attempts.read().unwrap();
-            if let Some(cached) = instance_attempts.get(&instance_meta_id) {
-                let now = time_util::now();
-                let last_updated = cached.get_last_updated();
-                if (expired.is_some() && expired.unwrap() < last_updated) || (last_updated + 10 > now) {
-                    return Ok(cached.get_cached());
-                }
-            }
+            let instance_metas = self.instance_metas.read().unwrap();
+            instance_metas.1.get(&instance_meta_id).ok_or(InstanceFailure::InvalidInput)?;
         }
 
         let attempts: Vec<InstanceViewerAttempt> = db_main
@@ -180,8 +137,6 @@ impl ExportInstance for Instance {
             .into_iter()
             .collect();
 
-        let mut instance_attempts = self.instance_attempts.write().unwrap();
-        instance_attempts.insert(instance_meta_id, Cachable::new(attempts.clone()));
         Ok(attempts)
     }
 }

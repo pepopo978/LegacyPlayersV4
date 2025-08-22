@@ -1,25 +1,27 @@
 use crate::modules::instance::dto::InstanceFailure;
 use crate::modules::instance::Instance;
 use crate::params;
-use crate::util::database::Execute;
+use crate::util::database::{Execute, Select};
 
 pub trait UnrankAttempt {
-    fn unrank_attempt(&self, db_main: &mut impl Execute, attempt_id: u32) -> Result<(), InstanceFailure>;
+    fn unrank_attempt(&self, db_main: &mut (impl Execute + Select), attempt_id: u32) -> Result<(), InstanceFailure>;
 }
 
 impl UnrankAttempt for Instance {
-    fn unrank_attempt(&self, db_main: &mut impl Execute, attempt_id: u32) -> Result<(), InstanceFailure> {
-        let i_m_i;
-        {
-            let mut attempts = self.instance_kill_attempts.write().unwrap();
-            let (instance_meta_id, instance_attempts) = attempts.1.iter_mut()
-                .find(|(_, i_attempts)| i_attempts.iter().any(|attempt| attempt.attempt_id == attempt_id))
-                .ok_or_else(|| InstanceFailure::InvalidInput)?;
-            let attempt = instance_attempts.iter_mut().find(|attempt| attempt.attempt_id == attempt_id).unwrap();
-            attempt.rankable = false;
-            let _ = db_main.execute_wparams("UPDATE `main`.`instance_attempt` SET rankable = 0 WHERE id=:attempt_id", params!("attempt_id" => attempt_id));
-            i_m_i = *instance_meta_id;
-        }
+    fn unrank_attempt(&self, db_main: &mut (impl Execute + Select), attempt_id: u32) -> Result<(), InstanceFailure> {
+        // Query the database to get the instance_meta_id for this attempt
+        let i_m_i = db_main
+            .select_wparams(
+                "SELECT instance_meta_id FROM instance_attempt WHERE id = :attempt_id",
+                |mut row| row.take::<u32, usize>(0).unwrap(),
+                params!("attempt_id" => attempt_id)
+            )
+            .into_iter()
+            .next()
+            .ok_or_else(|| InstanceFailure::InvalidInput)?;
+
+        // Update the database to mark as unrankable
+        let _ = db_main.execute_wparams("UPDATE `main`.`instance_attempt` SET rankable = 0 WHERE id=:attempt_id", params!("attempt_id" => attempt_id));
 
         {
             let mut speed_runs = self.speed_runs.write().unwrap();

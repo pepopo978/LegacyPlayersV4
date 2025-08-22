@@ -4,13 +4,12 @@ use std::io::Read;
 use std::sync::{Arc, RwLock};
 use sha2::{Sha256, Digest};
 
-use crate::material::Cachable;
 use crate::modules::armory::tools::{GetCharacter};
 use crate::modules::armory::util::talent_tree::get_talent_tree;
 use crate::modules::armory::Armory;
 use crate::modules::data::Data;
 use crate::modules::instance::domain_value::{InstanceAttempt, InstanceMeta, MetaType, PrivacyType};
-use crate::modules::instance::dto::{InstanceViewerAttempt, SpeedKill, SpeedRun};
+use crate::modules::instance::dto::{SpeedKill, SpeedRun};
 use crate::modules::instance::tools::FindInstanceGuild;
 use crate::modules::live_data_processor::dto::LiveDataProcessorFailure;
 use crate::modules::live_data_processor::tools::log_parser::parse_cbl;
@@ -21,21 +20,14 @@ use zip::ZipArchive;
 
 pub struct Instance {
     pub instance_metas: Arc<RwLock<(u32, HashMap<u32, InstanceMeta>)>>,
-    pub instance_exports: Arc<RwLock<HashMap<(u32, u8), Cachable<Vec<String>>>>>,
-    pub instance_attempts: Arc<RwLock<HashMap<u32, Cachable<Vec<InstanceViewerAttempt>>>>>,
     pub speed_runs: Arc<RwLock<Vec<SpeedRun>>>,
     pub speed_kills: Arc<RwLock<Vec<SpeedKill>>>,
-
-    pub instance_kill_attempts: Arc<RwLock<(u32, HashMap<u32, Vec<InstanceAttempt>>)>>,
 }
 
 impl Default for Instance {
     fn default() -> Self {
         Instance {
             instance_metas: Arc::new(RwLock::new((0, HashMap::new()))),
-            instance_exports: Arc::new(RwLock::new(HashMap::new())),
-            instance_attempts: Arc::new(RwLock::new(HashMap::new())),
-            instance_kill_attempts: Arc::new(RwLock::new((0, HashMap::new()))),
             speed_runs: Arc::new(RwLock::new(Vec::new())),
             speed_kills: Arc::new(RwLock::new(Vec::new())),
         }
@@ -45,9 +37,6 @@ impl Default for Instance {
 impl Instance {
     pub fn init(self, mut db_main: (impl Select + Send + Execute + 'static)) -> Self {
         let instance_metas_arc_clone = Arc::clone(&self.instance_metas);
-        let instance_exports_arc_clone = Arc::clone(&self.instance_exports);
-        let instance_attempts_arc_clone = Arc::clone(&self.instance_attempts);
-        let instance_kill_attempts_clone = Arc::clone(&self.instance_kill_attempts);
 
         let dns = std::env::var("MYSQL_URL").unwrap();
         let opts = Opts::from_url(&dns).unwrap();
@@ -64,14 +53,8 @@ impl Instance {
                 println!("[Update loop] starting update {}", time_util::now());
                 delete_old_character_data(&mut db_main);
                 println!("[Update loop] finish delete old character data");
-                evict_attempts_cache(Arc::clone(&instance_attempts_arc_clone));
-                println!("[Update loop] finish evict_attempts_cache");
-                evict_export_cache(Arc::clone(&instance_exports_arc_clone));
-                println!("[Update loop] finish evict_export_cache");
                 update_instance_metas(Arc::clone(&instance_metas_arc_clone), &mut db_main);
                 println!("[Update loop] finish update_instance_metas");
-                update_instance_kill_attempts(Arc::clone(&instance_kill_attempts_clone), &mut db_main);
-                println!("[Update loop] finish update_instance_kill_attempts");
 
                 if armory_counter % 10 == 1 {
                     println!("Updating rankings at {}", time_util::now());
@@ -391,37 +374,7 @@ fn calculate_season_index(ts: u64) -> u8 {
     (1 + (ts - starting_unix_time) / one_week_in_ms) as u8
 }
 
-fn update_instance_kill_attempts(instance_kill_attempts: Arc<RwLock<(u32, HashMap<u32, Vec<InstanceAttempt>>)>>, db_main: &mut impl Select) {
-    let mut kill_attempts = instance_kill_attempts.write().unwrap();
-    db_main
-        .select_wparams(
-            "SELECT A.instance_meta_id, A.id, A.encounter_id, A.start_ts, A.end_ts, B.map_difficulty, A.rankable FROM instance_attempt A JOIN instance_raid B ON A.instance_meta_id = B.instance_meta_id WHERE A.is_kill = 1 AND A.id > \
-             :saved_attempt_id ORDER BY A.id",
-            |mut row| {
-                let start_ts = row.take(3).unwrap();
-                (
-                    row.take::<u32, usize>(0).unwrap(),
-                    InstanceAttempt {
-                        attempt_id: row.take(1).unwrap(),
-                        encounter_id: row.take(2).unwrap(),
-                        start_ts,
-                        end_ts: row.take(4).unwrap(),
-                        is_kill: true,
-                        difficulty_id: row.take(5).unwrap(),
-                        rankable: row.take(6).unwrap(),
-                        season_index: calculate_season_index(start_ts),
-                    },
-                )
-            },
-            params!("saved_attempt_id" => kill_attempts.0),
-        )
-        .into_iter()
-        .for_each(|(instance_meta_id, instance_attempt)| {
-            kill_attempts.0 = instance_attempt.attempt_id;
-            let attempt_container = kill_attempts.1.entry(instance_meta_id).or_insert_with(Vec::new);
-            attempt_container.push(instance_attempt);
-        });
-}
+
 
 fn update_instance_rankings_dps(db_main: &mut (impl Execute + Select), armory: &Armory) {
     let results = db_main
@@ -586,51 +539,6 @@ fn update_instance_rankings_hps(db_main: &mut (impl Execute + Select), armory: &
 
             db_main.execute_one(&batch_insert);
         }
-    }
-}
-fn evict_attempts_cache(instance_attempts: Arc<RwLock<HashMap<u32, Cachable<Vec<InstanceViewerAttempt>>>>>) {
-    // Get current time
-    let now = time_util::now();
-
-    // Time to evict (1 hour in seconds)
-    let eviction_time = 1 * 60 * 60; // 3600 seconds
-
-    // Lock for writing
-    let mut instance_attempts = instance_attempts.write().unwrap();
-
-    // Create a list of keys to remove
-    let keys_to_remove: Vec<u32> = instance_attempts
-        .iter()
-        .filter(|(_, cachable)| cachable.get_last_access() + eviction_time < now)
-        .map(|(key, _)| *key)
-        .collect();
-
-    // Remove expired entries
-    for key in keys_to_remove {
-        instance_attempts.remove(&key);
-    }
-}
-
-fn evict_export_cache(instance_exports: Arc<RwLock<HashMap<(u32, u8), Cachable<Vec<String>>>>>) {
-    // Get current time
-    let now = time_util::now();
-
-    // Time to evict (1 hour in seconds)
-    let eviction_time = 1 * 60 * 60; // 3600 seconds
-
-    // Lock for writing
-    let mut instance_exports = instance_exports.write().unwrap();
-
-    // Create a list of keys to remove
-    let keys_to_remove: Vec<(u32, u8)> = instance_exports
-        .iter()
-        .filter(|(_, cachable)| cachable.get_last_access() + eviction_time < now)
-        .map(|(key, _)| *key)
-        .collect();
-
-    // Remove expired entries
-    for key in keys_to_remove {
-        instance_exports.remove(&key);
     }
 }
 
