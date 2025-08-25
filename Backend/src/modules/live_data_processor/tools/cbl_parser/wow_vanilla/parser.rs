@@ -234,7 +234,7 @@ impl CombatLogParser for WoWVanillaParser {
             static ref RE_DAMAGE_HIT_OR_CRIT: Regex = Regex::new(r"(.+[^\s]) (cr|h)its (.+[^\s]) for (\d+)\.\s?(.*)").unwrap();
             static ref RE_DAMAGE_HIT_OR_CRIT_SCHOOL: Regex = Regex::new(r"(.+[^\s]) (cr|h)its (.+[^\s]) for (\d+) ([a-zA-Z]+) damage\.\s?(.*)").unwrap();
             static ref RE_DAMAGE_MISS: Regex = Regex::new(r"(.+[^\s]) misses (.+[^\s])\.").unwrap();
-            static ref RE_DAMAGE_BLOCK_PARRY_EVADE_DODGE_DEFLECT: Regex = Regex::new(r"(.+[^\s]) attacks\. (.+[^\s]) (blocks|parries|evades|dodges|deflects)\.").unwrap();
+            static ref RE_DAMAGE_BLOCK_PARRY_DODGE_DEFLECT: Regex = Regex::new(r"(.+[^\s]) attacks\. (.+[^\s]) (blocks|parries|dodges|deflects)\.").unwrap();
             static ref RE_DAMAGE_ABSORB_RESIST: Regex = Regex::new(r"(.+[^\s]) attacks\. (.+[^\s]) (absorbs|resists) all the damage\.").unwrap();
             static ref RE_DAMAGE_IMMUNE: Regex = Regex::new(r"(.+[^\s]) attacks but (.+[^\s]) is immune\.").unwrap();
 
@@ -243,7 +243,7 @@ impl CombatLogParser for WoWVanillaParser {
             static ref RE_DAMAGE_PERIODIC: Regex = Regex::new(r"(.+[^\s]) suffers (\d+) ([a-zA-Z]+) damage from (.+[^\s])\s's (.+[^\s])\.\s?(.*)").unwrap();
             static ref RE_DAMAGE_SPELL_SPLIT: Regex = Regex::new(r"(.+[^\s])\s's (.+[^\s]) causes (.+[^\s]) (\d+) damage\.\s?(.*)").unwrap();
             static ref RE_DAMAGE_SPELL_MISS: Regex = Regex::new(r"(.+[^\s])\s's (.+[^\s]) misse(s|d) (.+[^\s])\.").unwrap();
-            static ref RE_DAMAGE_SPELL_BLOCK_PARRY_EVADE_DODGE_RESIST_DEFLECT: Regex = Regex::new(r"(.+[^\s])\s's (.+[^\s]) was (blocked|parried|evaded|dodged|resisted|deflected) by (.+[^\s])\.").unwrap();
+            static ref RE_DAMAGE_SPELL_BLOCK_PARRY_DODGE_RESIST_DEFLECT: Regex = Regex::new(r"(.+[^\s])\s's (.+[^\s]) was (blocked|parried|dodged|resisted|deflected) by (.+[^\s])\.").unwrap();
             static ref RE_DAMAGE_SPELL_ABSORB: Regex = Regex::new(r"(.+[^\s])\s's (.+[^\s]) is absorbed by (.+[^\s])\.").unwrap();
             static ref RE_DAMAGE_SPELL_ABSORB_SELF: Regex = Regex::new(r"(.+[^\s]) absorbs (.+[^\s])\s's (.+[^\s])\.").unwrap();
             static ref RE_DAMAGE_REFLECT: Regex = Regex::new(r"(.+[^\s])\s's (.+[^\s]) is reflected back by (.+[^\s])\.").unwrap();
@@ -852,7 +852,7 @@ impl CombatLogParser for WoWVanillaParser {
             ]);
         }
 
-        if let Some(captures) = RE_DAMAGE_SPELL_BLOCK_PARRY_EVADE_DODGE_RESIST_DEFLECT.captures(&content) {
+        if let Some(captures) = RE_DAMAGE_SPELL_BLOCK_PARRY_DODGE_RESIST_DEFLECT.captures(&content) {
             let attacker = parse_unit(&mut self.cache_unit, data, captures.get(1)?.as_str())?;
             let spell_name = captures.get(2)?.as_str();
             let spell_id = parse_spell_args(&mut self.cache_spell_id, data, spell_name)?;
@@ -1076,7 +1076,7 @@ impl CombatLogParser for WoWVanillaParser {
             })]);
         }
 
-        if let Some(captures) = RE_DAMAGE_BLOCK_PARRY_EVADE_DODGE_DEFLECT.captures(&content) {
+        if let Some(captures) = RE_DAMAGE_BLOCK_PARRY_DODGE_DEFLECT.captures(&content) {
             let attacker = parse_unit(&mut self.cache_unit, data, captures.get(1)?.as_str())?;
             let victim = parse_unit(&mut self.cache_unit, data, captures.get(2)?.as_str())?;
             let hit_type = match captures.get(3)?.as_str() {
