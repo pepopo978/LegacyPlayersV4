@@ -16,7 +16,7 @@ COPY ./Cargo.lock /Backend/Cargo.lock
 
 WORKDIR /Backend
 
-RUN cargo build --release --locked
+RUN cargo build --release
 
 # Run with heaptrack
 ENTRYPOINT ["/bin/bash", "-c", "export RUST_BACKTRACE=full; sleep 5s && if [ \"$USE_HEAPTRACK\" = \"true\" ] || [ \"$USE_HEAPTRACK\" = \"1\" ]; then heaptrack /Backend/target/release/backend; else /Backend/target/release/backend; fi"]
